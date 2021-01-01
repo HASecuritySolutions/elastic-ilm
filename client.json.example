@@ -1,0 +1,24 @@
+{
+  "ca_file": "/home/jhenderson/elastic/ca.crt",
+  "es_host": "es_ip_or_dns_name",
+  "es_port": 9200,
+  "password": {
+    "admin_password": "password"
+  },
+  "policy": {
+    "allocation": {
+      "global": 30,
+      ".monitoring": 7
+    },
+    "rollover": {
+      "global": {
+        "size": "auto",
+	"days": 30
+      }
+    },
+    "retention": {
+      "global": 90,
+      ".monitoring": 0
+    }
+  }
+}
