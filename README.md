@@ -15,6 +15,9 @@ In addition, decoupling from Elastic's ILM and using this projects custom ILM al
 - [ ] Roadmap Item - Identify indices not attached to a rollover
 - [ ] Roadmap Item - Support auto migration of non-rollover attached indices to rollovers
 - [ ] Roadmap Item - Support auto reindex of prior non-rollover data into rollover indices
+- [ ] Considering - Support working in conjunction with Elastic's native ILM
+
+:x: Do not use this ILM with Elastic's native ILM - They cannot co-exist
 
 # Quickstart - Assumes Ubuntu 20.04
 
