@@ -12,12 +12,55 @@ In addition, decoupling from Elastic's ILM and using this projects custom ILM al
 - [x] Purge indices based on newest document within index
 - [x] Generate accounting/billing information for index consumption with hot/warm tier pricing models
 - [ ] Roadmap Item - Mark index allocation to move data from hot to warm
-- [ ] Roadmap Item - Identify indices not attached to a rollover
-- [ ] Roadmap Item - Support auto migration of non-rollover attached indices to rollovers
-- [ ] Roadmap Item - Support auto reindex of prior non-rollover data into rollover indices
+- [ ] Considering - Identify indices not attached to a rollover
+- [ ] Considering - Support auto migration of non-rollover attached indices to rollovers
+- [ ] Considering - Support auto reindex of prior non-rollover data into rollover indices
 - [ ] Considering - Support working in conjunction with Elastic's native ILM
 
 :x: Do not use this ILM with Elastic's native ILM - They cannot co-exist
+
+# Quickstart - Docker (Assumes Ubuntu OS as host)
+
+:!: If you wish to use a traditional install, skip the Docker section and go down to the **Quickstart Ubuntu 20.04 section.**
+
+If you do not have docker installed, install it. The command to install Docker is usually one of the commands below. Find which one works on your system. Do not run them all unless you are doing trial and error.
+
+```bash
+# Debian-based OS
+sudo apt install docker-ce
+sudo apt install docker
+sudo apt install docker.io
+
+# RPM-based OS
+sudo yum install docker-ce
+sudo yum install docker
+sudo yum install docker.io
+```
+
+Start by creating a **settings.toml** and **client.json** using this repositories **settings.toml.example** and **client.json.example** as starting configuration files. The example commands below pull down the examples and renames them. Do not forget to open and edit them.
+
+```bash
+wget https://raw.githubusercontent.com/HASecuritySolutions/elastic-ilm/main/client.json.example -O client.json
+wget https://raw.githubusercontent.com/HASecuritySolutions/elastic-ilm/main/settings.toml.example -O settings.toml
+```
+
+Next, test deploy your container. This will launch it as an interactive terminal. Once you see it working you can press **CTRL+C** to kill the container. It will automatically be removed on stop due to **--rm**.
+
+```bash
+docker run -it --name elastic-ilm --rm -v ./settings.toml:/opt/elastic-ilm/settings.toml:ro -v ./client.json:/opt/elastic-ilm/client.json:ro hasecuritysolutions/elastic-ilm:latest
+```
+
+If everything ran correctly then feel free to deploy the container as an ongoing service with the command below.
+
+```bash
+docker run -d --name elastic-ilm -v ./settings.toml:/opt/elastic-ilm/settings.toml:ro -v ./client.json:/opt/elastic-ilm/client.json:ro hasecuritysolutions/elastic-ilm:latest
+```
+
+If you are planning on using the accounting feature, make sure to add a volume mount for the path you are saving accounting files. Example below. Replace **/opt/accounting:/opt/accounting** with the path to where you will be saving your accounting data.
+
+```bash
+docker run -d --name elastic-ilm -v ./settings.toml:/opt/elastic-ilm/settings.toml:ro -v ./client.json:/opt/elastic-ilm/client.json:ro -v /opt/accounting:/opt/accounting hasecuritysolutions/elastic-ilm:latest
+```
 
 # Quickstart - Assumes Ubuntu 20.04
 
