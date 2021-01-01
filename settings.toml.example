@@ -1,0 +1,68 @@
+# Values of true or false in the below settings file should not have quotes around them
+
+[settings]
+# Empty means current folder
+client_json_folder = ''
+# Set to true to enable debug messages
+debug = false
+# If you have multiple ES clients and need to limit execution to one,
+# set the below to the client_name
+limit_to_client = ''
+
+[notification]
+smtp = "disabled"
+ms-teams = "disabled"
+jira = "disabled"
+
+[smtp]
+from_email = 'from@domain.com'
+username = 'user@domain.com'
+password = ''
+smtp_host = 'smtp.office365.com'
+smtp_port = 587
+
+[ms-teams]
+webhook = ''
+
+[retention]
+enabled = true
+minutes_between_run = 60
+health_check_level = 'yellow'
+
+# Which notifications to use on failure
+ms-teams = true
+jira = false
+
+[rollover]
+enabled = false
+minutes_between_run = 10
+health_check_level = 'yellow'
+
+# Which notifications to use on failure
+ms-teams = true
+jira = false
+
+[accounting]
+# Needs to be true or false with no quotes
+enabled = false 
+# Run every 4 hours
+minutes_between_run = 240
+# Empty means current folder - not recommended
+output_folder = ''
+output_to_es = true
+send_copy_to_client_name = ''
+# Expected cluster health level (green, yellow, or red)
+# Green is recommended otherwise accounting may be inaccurate
+health_check_level = 'green'
+retry_attempts = 10
+retry_wait_in_seconds = 1200
+# On final retry, what cluster level is acceptable (yellow is recommended)
+fallback_health_check_level = 'yellow'
+
+# Costs are per day based on GB
+ssd_cost = 0.03
+sata_cost = 0.001
+
+# Which notifications to use on failure
+ms-teams = false
+jira = false
