@@ -11,13 +11,33 @@ In addition, decoupling from Elastic's ILM and using this projects custom ILM al
 - [x] Purge indices based on index creation date
 - [x] Purge indices based on newest document within index
 - [x] Generate accounting/billing information for index consumption with hot/warm tier pricing models
-- [] Roadmap Item - Mark index allocation to move data from hot to warm
-- [] Roadmap Item - Identify indices not attached to a rollover
-- [] Roadmap Item - Support auto migration of non-rollover attached indices to rollovers
-- [] Roadmap Item - Support auto reindex of prior non-rollover data into rollover indices
+- [ ] Roadmap Item - Mark index allocation to move data from hot to warm
+- [ ] Roadmap Item - Identify indices not attached to a rollover
+- [ ] Roadmap Item - Support auto migration of non-rollover attached indices to rollovers
+- [ ] Roadmap Item - Support auto reindex of prior non-rollover data into rollover indices
 
-# Quickstart
+# Quickstart - Assumes Ubuntu 20.04
+
+First, clone and install the project's required python libraries:
 
 ```bash
-git clone 
+sudo apt install pipenv
+cd /opt/
+sudo git clone https://github.com/HASecuritySolutions/elastic-ilm.git
+chown -R $USER:$USER elastic-ilm
+cd /opt/elastic-ilm
+pipenv install
+cp settings.toml.example settings.toml
+cp client.json.example client.json
+```
+
+Next, edit the **settings.toml** and **client.json** files.
+
+Finally, install the service.
+
+```bash
+sudo cp elastic-ilm.service /etc/systemd/system
+sudo systemctl daemon-reload
+sudo systemctl enable elastic-ilm
+sudo service elastic-ilm start
 ```
