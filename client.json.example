@@ -13,12 +13,12 @@
     "rollover": {
       "global": {
         "size": "auto",
-	"days": 30
+	      "days": 30
       }
     },
     "retention": {
       "global": 90,
-      ".monitoring": 0
+      ".monitoring": 7
     }
   }
 }

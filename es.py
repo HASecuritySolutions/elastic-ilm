@@ -399,9 +399,20 @@ def check_acknowledged_true(status):
 
 # Connection built similar to https://elasticsearch-py.readthedocs.io/en/7.10.0/api.html#elasticsearch
 # Had trouble with check_hostname set to True for some reason
-def build_es_connection(client):
+def build_es_connection(client_config):
+
+    # Support older variable implementations of grabbing the ca.crt file
+    if "ca_file" in client_config:
+        if os.path.exists(client_config['ca_file']):
+            ca_file = client_config['ca_file']
+        else:
+            exit("CA file referenced does not exist")
+    else:
+        if "client_file_location" in client_config:
+            if os.path.exists(client_config['client_file_location'] + "/ca/ca.crt"):
+                ca_file = client_config['client_file_location'] + "/ca/ca.crt"
+    
     try:
-        ca_file=client['client_file_location'] + "/ca/ca.crt"
         context = ssl.create_default_context(
                         cafile=ca_file)
         context.check_hostname = False
@@ -412,30 +423,35 @@ def build_es_connection(client):
             "ssl_context": context,
         }
 
-        if client['platform'] == "elastic":
+        if client_config['platform'] == "elastic":
             es_config['http_auth'] = (
-                "elastic", client['password']['admin_password'])
+                "elastic", client_config['password']['admin_password'])
         else:
             es_config['http_auth'] = (
-                "admin", client['password']['admin_password'])
-
-        if client['client_number'] == 0:
-            client_port = "9200"
+                "admin", client_config['password']['admin_password'])
+        if 'es_port' in client_config:
+            es_port = client_config['es_port']
         else:
-            client_port = str(client['client_number']) + "03"
+            if client_config['client_number'] == 0:
+                es_port = "9200"
+            else:
+                es_port = str(client_config['client_number']) + "03"
 
-        es_host = client['client_name'] + "_client"
+        if 'es_host' in client_config:
+            es_host = client_config['es_host']
+        else:
+            es_host = client_config['client_name'] + "_client"
         return Elasticsearch(
-            [{'host': es_host, 'port': client_port}], **es_config) 
+            [{'host': es_host, 'port': es_port}], **es_config) 
     except:
         e = sys.exc_info()
         print("Connection attempt to Elasticsearch Failed")
         print(e)
         return False
 
-def check_cluster_health(client):
+def check_cluster_health(client_config):
     try:
-        es = build_es_connection(client)
+        es = build_es_connection(client_config)
         return es.cluster.health()
     except:
         e = sys.exc_info()
