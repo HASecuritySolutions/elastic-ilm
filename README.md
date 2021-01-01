@@ -42,3 +42,5 @@ sudo systemctl daemon-reload
 sudo systemctl enable elastic-ilm
 sudo service elastic-ilm start
 ```
+
+This project is provided by H & A Security Solutions LLC. If you are interested in additional capabilities, professional engagements, or SIEM/NSM guidance, please reach out to info@hasecuritysolutions.com.
