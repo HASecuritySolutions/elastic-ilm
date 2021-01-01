@@ -21,7 +21,8 @@ In addition, decoupling from Elastic's ILM and using this projects custom ILM al
 First, clone and install the project's required python libraries:
 
 ```bash
-sudo apt install pipenv
+sudo apt update
+sudo apt install python3 python3-pip pipenv
 cd /opt/
 sudo git clone https://github.com/HASecuritySolutions/elastic-ilm.git
 chown -R $USER:$USER elastic-ilm
@@ -31,7 +32,7 @@ cp settings.toml.example settings.toml
 cp client.json.example client.json
 ```
 
-Next, edit the **settings.toml** and **client.json** files.
+Next, edit the **settings.toml** and **client.json** files. The **settings.toml** controls which ILM features are enabled as well as allows for fine tuning feature settings. The **client.json** includes Elasticsearch cluster information as well as policy information. The H & A Security Solutions Elastic ILM supports multiple elasticsearch clusters. To apply ILM to multiple clusters simply create more json files such as **client2.json**. Any \*.json file found in this project folder, by default, will be treated as a client file.
 
 Finally, install the service.
 
