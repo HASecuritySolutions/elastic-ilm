@@ -21,7 +21,7 @@ In addition, decoupling from Elastic's ILM and using this projects custom ILM al
 
 # Quickstart - Docker (Assumes Ubuntu OS as host)
 
-:!: If you wish to use a traditional install, skip the Docker section and go down to the **Quickstart Ubuntu 20.04 section.**
+:warning: If you wish to use a traditional install, skip the Docker section and go down to the **Quickstart Ubuntu 20.04 section.**
 
 If you do not have docker installed, install it. The command to install Docker is usually one of the commands below. Find which one works on your system. Do not run them all unless you are doing trial and error.
 
