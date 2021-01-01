@@ -8,8 +8,11 @@ from itertools import islice
 import sys
 import os
 import re
+from config import load_settings
 from datetime import datetime
 from sys import stdout
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def check_index_allocation_policy(index, policies):
     match_found = 0
@@ -400,43 +403,92 @@ def check_acknowledged_true(status):
 # Connection built similar to https://elasticsearch-py.readthedocs.io/en/7.10.0/api.html#elasticsearch
 # Had trouble with check_hostname set to True for some reason
 def build_es_connection(client_config):
-
-    # Support older variable implementations of grabbing the ca.crt file
-    if "ca_file" in client_config:
-        if os.path.exists(client_config['ca_file']):
-            ca_file = client_config['ca_file']
-        else:
-            exit("CA file referenced does not exist")
-    else:
-        if "client_file_location" in client_config:
-            if os.path.exists(client_config['client_file_location'] + "/ca/ca.crt"):
-                ca_file = client_config['client_file_location'] + "/ca/ca.crt"
-    
+    settings = load_settings()
     try:
-        context = ssl.create_default_context(
-                        cafile=ca_file)
-        context.check_hostname = False
-        context.verify_mode = ssl.CERT_REQUIRED
-
-        es_config = {
-            "scheme": "https",
-            "ssl_context": context,
-        }
-
-        if client_config['platform'] == "elastic":
-            es_config['http_auth'] = (
-                "elastic", client_config['password']['admin_password'])
+        # Check to see if SSL is enabled
+        ssl_enabled = False
+        if "ssl_enabled" in client_config:
+            if client_config['ssl_enabled']:
+                ssl_enabled = True
         else:
+            ssl_enabled = settings['settings']['ssl_enabled']
+
+        # Get the SSL settings for the connection if SSL is enabled
+        if ssl_enabled:
+            # Support older variable implementations of grabbing the ca.crt file
+            ca_file = ""
+            if "ca_file" in client_config:
+                if os.path.exists(client_config['ca_file']):
+                    ca_file = client_config['ca_file']
+                else:
+                    exit("CA file referenced does not exist")
+            elif "client_file_location" in client_config:
+                if os.path.exists(client_config['client_file_location'] + "/ca/ca.crt"):
+                    ca_file = client_config['client_file_location'] + "/ca/ca.crt"
+            
+            if ca_file != "":
+                context = ssl.create_default_context(
+                            cafile=ca_file)
+            else:
+                context = ssl.create_default_context()
+
+            if "check_hostname" in client_config:
+                check_hostname = client_config['check_hostname']
+            else:
+                check_hostname = settings['settings']['check_hostname']
+            if check_hostname:
+                context.check_hostname = True
+            else:
+                context.check_hostname = False
+
+            if "ssl_certificate" in client_config:
+                ssl_certificate = client_config['ssl_certificate']    
+            else:
+                ssl_certificate = settings['settings']['ssl_certificate']
+            if ssl_certificate == "required":
+                context.verify_mode = ssl.CERT_REQUIRED
+            elif ssl_certificate == "optional":
+                context.verify_mode = ssl.CERT_OPTIONAL
+            else:
+                context.verify_mode = ssl.CERT_NONE
+
+            es_config = {
+                "scheme": "https",
+                "ssl_context": context,
+            }
+
+        # Enable authentication if there is a passwod section in the client JSON
+        password_authentication = False
+        if 'password_authentication' in client_config:
+            if client_config['password_authentication']:
+                password_authentication = True
+        elif 'admin_password' in client_config['password']:
+                password_authentication = True
+        if password_authentication:
+            user = ''
+            password = ''
+            if 'es_password' in client_config:
+                password = client_config['password']
+            elif 'admin_password' in client_config['password']:
+                password = client_config['password']['admin_password']
+            if 'es_user' in client_config:
+                user = client_config['es_user']
+            elif client_config['platform'] == "elastic":
+                user = 'elastic'
+            else:
+                user = 'admin'
             es_config['http_auth'] = (
-                "admin", client_config['password']['admin_password'])
+                        user, password)
+
+        # Get the Elasticsearch port to connect to
         if 'es_port' in client_config:
             es_port = client_config['es_port']
+        elif client_config['client_number'] == 0:
+            es_port = "9200"
         else:
-            if client_config['client_number'] == 0:
-                es_port = "9200"
-            else:
-                es_port = str(client_config['client_number']) + "03"
+            es_port = str(client_config['client_number']) + "03"
 
+        # Get the Elasticsearch host to connect to
         if 'es_host' in client_config:
             es_host = client_config['es_host']
         else:

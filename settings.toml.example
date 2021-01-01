@@ -8,6 +8,17 @@ debug = false
 # If you have multiple ES clients and need to limit execution to one,
 # set the below to the client_name
 limit_to_client = ''
+# Is password authentication enabled - set to true or false
+# Requires the following fields in client.json files: es_user and es_password
+password_authentication = false
+# Set to true if Elastic requires SSL/TLS - Each SSL setting below is the global 
+# default. You can override this pert client JSON entry with ssl_enabled inside
+# the client JSON document
+ssl_enabled = false
+# Enforce certificate trust? Can be required, optional, disabled
+ssl_certificate = 'disabled'
+# Enforce hostname checks? Can be true or false
+check_hostname = false
 
 [notification]
 smtp = "disabled"
