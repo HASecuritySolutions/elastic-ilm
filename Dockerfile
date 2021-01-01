@@ -1,6 +1,6 @@
 FROM python:3.8.7-slim
 
-LABEL description="H & A Security Solution Elastic ILM"
+LABEL description="H & A Security Solutions Elastic ILM"
 LABEL maintainer="Justin Henderson -justin@hasecuritysolutions.com"
 
 RUN apt update&& \
