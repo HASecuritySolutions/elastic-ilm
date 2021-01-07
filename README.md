@@ -30,11 +30,13 @@ If you do not have docker installed, install it. The command to install Docker i
 sudo apt install docker-ce
 sudo apt install docker
 sudo apt install docker.io
+sudo apt install docker-compose
 
 # RPM-based OS
 sudo yum install docker-ce
 sudo yum install docker
 sudo yum install docker.io
+sudo yum install docker-compose
 ```
 
 Start by creating a **settings.toml** and **client.json** using this repositories **settings.toml.example** and **client.json.example** as starting configuration files. The example commands below pull down the examples and renames them. Do not forget to open and edit them.
@@ -90,3 +92,43 @@ sudo service elastic-ilm start
 ```
 
 This project is provided by H & A Security Solutions LLC. If you are interested in additional capabilities, professional engagements, or SIEM/NSM guidance, please reach out to info@hasecuritysolutions.com.
+
+# Demo Workshop - Assumes you have docker, docker-compose, and pipenv installed (see guides above)
+
+Note - The demo workshop assumes you are using /opt/elastic-ilm for your GitHub path. To do so you can do this:
+
+```bash
+sudo mkdir /opt/elastic-ilm -p
+sudo chown -R $USER:$USER /opt/elastic-ilm # Gives the current user ownership of the folder
+cd /opt/elastic-ilm
+git clone https://github.com/HASecuritySolutions/elastic-ilm.git .
+pipenv install
+```
+
+First, deploy an Elasticsearch and Kibana node to interact with. To do so, run the below commands from the demo folder of this GitHub repo.
+
+```bash
+cd /opt/elastic-ilm/demo
+docker-compose up -d
+```
+
+Next, start Jupyter notebook using the command below.
+
+```bash
+cd /opt/elastic-ilm
+pipenv run jupyter notebook --ip 0.0.0.0
+```
+
+You will see a string that looks similar to this:
+
+```bash
+To access the notebook, open this file in a browser:
+        file:///home/jhenderson/.local/share/jupyter/runtime/nbserver-22963-open.html
+    Or copy and paste one of these URLs:
+        http://JHENDERSONDSK:8888/?token=c8de56fa4deed24899803e93c227592aef6538f93025fe01
+     or http://127.0.0.1:8888/?token=c8de56fa4deed24899803e93c227592aef6538f93025fe01
+```
+
+You may get an error about "This command cannot be run due to an error. The system cannot find the file specified. Ignore the error and try connecting to http://localhost:8888. The page should load and ask for a password or token. Copy the token found after http://127.0.0.1:8888/?token= and paste it as the password. Then click **Log in**.
+
+In the File Browser, click on and load **Demo.ipynb**.
