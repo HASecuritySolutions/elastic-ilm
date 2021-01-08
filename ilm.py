@@ -39,7 +39,7 @@ if __name__ == "__main__":
     if manual == 0:
         notify.ready()
     if settings['accounting']['enabled']:
-        schedule.every(settings['accounting']['minutes_between_run']).minutes.do(run_threaded, run_accounting, manual_client)
+        schedule.every(settings['accounting']['minutes_between_run']).minutes.do(run_threaded, run_accounting, "")
     if settings['retention']['enabled']:
         schedule.every(settings['retention']['minutes_between_run']).minutes.do(run_threaded, apply_retention_policies, "yellow", manual_client)
     if settings['rollover']['enabled']:
