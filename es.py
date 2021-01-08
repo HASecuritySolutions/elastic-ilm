@@ -452,10 +452,6 @@ def build_es_connection(client_config):
 
         # Get the SSL settings for the connection if SSL is enabled
         if ssl_enabled:
-            es_config = {
-                "scheme": "https",
-                "ssl_context": context,
-            }
             # Support older variable implementations of grabbing the ca.crt file
             ca_file = ""
             if "ca_file" in client_config:
@@ -492,6 +488,11 @@ def build_es_connection(client_config):
                 context.verify_mode = ssl.CERT_OPTIONAL
             else:
                 context.verify_mode = ssl.CERT_NONE
+                
+            es_config = {
+                "scheme": "https",
+                "ssl_context": context,
+            }
 
         # Enable authentication if there is a passwod section in the client JSON
         password_authentication = False
