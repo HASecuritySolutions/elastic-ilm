@@ -41,7 +41,7 @@ if __name__ == "__main__":
     if settings['accounting']['enabled']:
         schedule.every(settings['accounting']['minutes_between_run']).minutes.do(run_threaded, run_accounting, manual_client)
     if settings['retention']['enabled']:
-        schedule.every(settings['retention']['minutes_between_run']).minutes.do(run_threaded, apply_retention_policies, manual_client)
+        schedule.every(settings['retention']['minutes_between_run']).minutes.do(run_threaded, apply_retention_policies, "yellow", manual_client)
     if settings['rollover']['enabled']:
         schedule.every(settings['rollover']['minutes_between_run']).minutes.do(run_threaded, apply_rollover_policies, manual_client)
 

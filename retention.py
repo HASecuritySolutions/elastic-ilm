@@ -5,7 +5,7 @@ import es
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 import threading
-
+notification = False
 def get_retention_policy(client_config):
     if "policy" in client_config:
         if "retention" in client_config['policy']:
@@ -58,6 +58,7 @@ def apply_retention_policies(health_check_level, manual_client):
         for client in clients:
             # Set nice variable names
             client_name = clients[client]['client_name']
+            print("Processing retention for " + client_name)
             client_config = clients[client]
             # If client set at command line only run it otherwise
             # execute for all clients

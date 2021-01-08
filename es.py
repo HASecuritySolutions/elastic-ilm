@@ -8,6 +8,7 @@ from itertools import islice
 import sys
 import os
 import re
+import json
 from config import load_settings
 from datetime import datetime
 from sys import stdout
@@ -70,6 +71,10 @@ def get_index_alias_members(client, alias):
 
 def get_all_index_aliases(client):
     es = build_es_connection(client)
+    members = es.cat.aliases(format="json")
+    return members
+
+def get_aliases(client_config):
     members = es.cat.aliases(format="json")
     return members
 
@@ -261,11 +266,42 @@ def rollover_index(client_config, index, alias):
                         { "add":    { "index": new_index, "alias": alias, "is_write_index": "true"  }}  
                     ]
                     })
-                    return get_index_operation_message(index, "rollover", status, teams=True)
+                    return get_index_operation_message(index, "rollover", status)
             else:
                 print("Failed to create new index" + str(new_index) + " for rollover index")
                 return False
         es.close()
+    except:
+        e = sys.exc_info()
+        print("Rollover job failed")
+        print(e)
+        return False
+
+def rollover_index_with_connection(client_config, index, alias, elastic_connection):
+    try:
+        indices = []
+        # Check if index is a single string or a list of indices
+        if isinstance(index, str):
+            indices.append(index)
+        if isinstance(index, list):
+            indices = index
+        for index in indices:
+            new_index = get_rollover_index_name(index)
+            status = elastic_connection.indices.create(index=new_index, ignore=400)
+            if 'acknowledged' in status:
+                if status['acknowledged']:
+                    # Update writeable index
+                    status = elastic_connection.indices.update_aliases({
+                    "actions": [
+                        { "remove":    { "index": index, "alias": alias }}, 
+                        { "add": { "index": index, "alias": alias, "is_write_index": "false"  }}, 
+                        { "add":    { "index": new_index, "alias": alias, "is_write_index": "true"  }}  
+                    ]
+                    })
+                    return status
+            else:
+                print("Failed to create new index" + str(new_index) + " for rollover index")
+                return False
     except:
         e = sys.exc_info()
         print("Rollover job failed")
@@ -404,6 +440,7 @@ def check_acknowledged_true(status):
 # Had trouble with check_hostname set to True for some reason
 def build_es_connection(client_config):
     settings = load_settings()
+    es_config = {}
     try:
         # Check to see if SSL is enabled
         ssl_enabled = False
@@ -452,10 +489,10 @@ def build_es_connection(client_config):
             else:
                 context.verify_mode = ssl.CERT_NONE
 
-            es_config = {
-                "scheme": "https",
-                "ssl_context": context,
-            }
+                es_config = {
+                    "scheme": "https",
+                    "ssl_context": context,
+                }
 
         # Enable authentication if there is a passwod section in the client JSON
         password_authentication = False
@@ -552,6 +589,15 @@ def load_file(file):
         with open(file) as my_file:
             contents = my_file.read()
         return contents
+    else:
+        return("File does not exist")
+
+def load_json_file(file):
+    data = []
+    if os.path.exists(file):
+        for line in open(file, 'r'):
+            data.append(json.loads(line))
+        return data
     else:
         return("File does not exist")
 

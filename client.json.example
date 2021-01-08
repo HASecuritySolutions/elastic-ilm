@@ -1,11 +1,12 @@
 {
+  "client_name": "demo",
   "ca_file": "/home/jhenderson/elastic/ca.crt",
-  "es_host": "es_ip_or_dns_name",
+  "es_host": "localhost",
   "es_port": 9200,
-  "ssl_enabled": False,
+  "ssl_enabled": false,
   "ssl_certificate": "required",
-  "check_hostname": False,
-  "password_authentication": False,
+  "check_hostname": false,
+  "password_authentication": false,
   "es_user": "elastic",
   "es_password": "password",
   "policy": {
@@ -17,11 +18,16 @@
       "global": {
         "size": "auto",
 	      "days": 30
+      },
+      "demo-nessus": {
+        "size": 0,
+        "days": 30
       }
     },
     "retention": {
       "global": 90,
-      ".monitoring": 7
+      ".monitoring": 7,
+      "demo-suricata": 0
     }
   }
 }
