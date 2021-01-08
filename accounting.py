@@ -139,8 +139,7 @@ def run_accounting(manual_client):
             # If client set at command line only run it otherwise
             # execute for all clients
             if manual_client == "" or clients[client]['client_name'] == manual_client:
-                if settings['settings']['limit_to_client'] == client or settings['settings']['limit_to_client'] == "":
-                    retry_list.append(clients[client]['client_name'])
+                retry_list.append(clients[client]['client_name'])
         # Loop through each client to perform accounting per client
         while retry_count >= 0 and len(retry_list) > 0:
             print("Accounting job processing for:")
