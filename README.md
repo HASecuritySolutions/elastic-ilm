@@ -78,6 +78,7 @@ cd /opt/elastic-ilm
 pipenv install
 cp settings.toml.example settings.toml
 cp client.json.example client.json
+mkdir /opt/elastic-ilm/accounting
 ```
 
 Next, edit the **settings.toml** and **client.json** files. The **settings.toml** controls which ILM features are enabled as well as allows for fine tuning feature settings. The **client.json** includes Elasticsearch cluster information as well as policy information. The H & A Security Solutions Elastic ILM supports multiple elasticsearch clusters. To apply ILM to multiple clusters simply create more json files such as **client2.json**. Any \*.json file found in this project folder, by default, will be treated as a client file.
@@ -102,6 +103,7 @@ sudo mkdir /opt/elastic-ilm -p
 sudo chown -R $USER:$USER /opt/elastic-ilm # Gives the current user ownership of the folder
 cd /opt/elastic-ilm
 git clone https://github.com/HASecuritySolutions/elastic-ilm.git .
+mkdir /opt/elastic-ilm/accounting
 pipenv install
 ```
 
