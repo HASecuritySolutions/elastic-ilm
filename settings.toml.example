@@ -59,7 +59,7 @@ enabled = false
 # Run every 4 hours
 minutes_between_run = 240
 # Empty means current folder - not recommended
-output_folder = ''
+output_folder = '/opt/elastic-ilm/accounting'
 output_to_es = true
 send_copy_to_client_name = ''
 # Expected cluster health level (green, yellow, or red)
