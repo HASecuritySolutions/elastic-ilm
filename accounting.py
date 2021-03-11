@@ -107,8 +107,8 @@ def calculate_accounting(client_config, client_name):
                     es.bulk_insert_data_to_es(elasticsearch_connection, result, "accounting", bulk_size=100)
                 elasticsearch_connection.close()
                 clients = load_configs()
-                if client_name != settings['accounting']['send_copy_to_client_name']:
-                    elasticsearch_connection = es.build_es_connection(clients["ha"])
+                if client_name != settings['accounting']['send_copy_to_client_name'] and settings['accounting']['send_copy_to_client_name'] != '':
+                    elasticsearch_connection = es.build_es_connection(clients[settings['accounting']['send_copy_to_client_name']])
                     results = es.get_list_by_chunk_size(accounting_records, 100)
                     for result in results:
                         es.bulk_insert_data_to_es(elasticsearch_connection, result, "accounting", bulk_size=100)
