@@ -505,7 +505,7 @@ def build_es_connection(client_config):
             user = ''
             password = ''
             if 'es_password' in client_config:
-                password = client_config['password']
+                password = client_config['es_password']
             elif 'admin_password' in client_config['password']:
                 password = client_config['password']['admin_password']
             if 'es_user' in client_config:
