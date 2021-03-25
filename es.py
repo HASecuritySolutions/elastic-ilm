@@ -2,7 +2,7 @@
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers
 from elasticsearch.connection import create_ssl_context
-from error import send_jira_event, send_ms_teams_message
+from error import send_jira_event, send_ms_teams_message, send_notification
 import ssl
 from itertools import islice
 import sys
@@ -269,7 +269,7 @@ def rollover_index(client_config, index, alias):
                         { "add":    { "index": new_index, "alias": alias, "is_write_index": "true"  }}  
                     ]
                     })
-                    return get_index_operation_message(index, "rollover", status)
+                    return get_index_operation_message(index, "rollover", status, client_config)
             else:
                 print("Failed to create new index" + str(new_index) + " for rollover index")
                 return False
@@ -332,16 +332,24 @@ def get_dictionary_by_chunk_size(input_dictionary, chunk_size=100):
 
     return results
 
-def get_index_operation_message(index, operation, status, jira=False, teams=False):
+def get_index_operation_message(index, operation, status, client_config):
     if check_acknowledged_true(status):
         print(operation.capitalize() + " successful for " + index)
         return True
     else:
         print(operation.capitalize() + " failed for " + index + " with a status of\n\n:" + str(status))
-        if teams:
-            send_ms_teams_message(operation.capitalize() + " Failure", operation.capitalize() + " failed for " + index + " with a status of\n\n:" + str(status))
-        if jira:
-            send_jira_event(operation.capitalize() + " Failure", operation.capitalize() + " failed for " + index + " with a status of\n\n:" + str(status))
+        settings = load_settings()
+        if operation == "delete":
+            policy = 'retention'
+        if operation == "rollover":
+            policy = 'rollover'
+        if operation == 'forcemerge':
+            policy = 'rollover'
+        # Set fallback policy for notification settings
+        if operation != 'delete' and operation != 'rollover' and operation != 'forcemerge':
+            policy = 'retention'
+        
+        send_notification(client_config, operation.capitalize(), operation.capitalize() + " Failure", operation.capitalize() + " failed for " + index + " with a status of\n\n:" + str(status), teams=settings[policy]['ms-teams'], jira=settings[policy]['jira'])
         return False
 
 def bulk_insert_data_to_es(elasticsearch_connection, data, index, bulk_size=100):
@@ -375,7 +383,7 @@ def delete_index(client_config, index):
             indices = index
             # Delete the index
             status = es.indices.delete(index=index)
-            get_index_operation_message(indices, "delete", status)
+            get_index_operation_message(indices, "delete", status, client_config)
         if isinstance(index, list):
             # Convert list into chunks of 50
             # This will create a list of lists up to 50 indices per list
@@ -384,19 +392,21 @@ def delete_index(client_config, index):
                 indices = ",".join(chunk)
                 # Delete the group of indices
                 status = es.indices.delete(index=indices)
-                get_index_operation_message(indices, "delete", status)
+                get_index_operation_message(indices, "delete", status, client_config)
         # Close Elasticsearch connection
         es.close()
     except:
         e = sys.exc_info()
         print("Deletion job failed")
+        settings = load_settings()
+        send_notification(client_config, "retention", "Failed", "Deletion job failed for indices " + str(indices), teams=settings['retention']['ms-teams'], jira=settings['retention']['jira'])
         print(e)
 
 def forcemerge_index(client_config, index):
     try:
         es = build_es_connection(client_config)
         status = es.indices.forcemerge(index=index, max_num_segments=1)
-        return es.get_index_operation_message(index, "forcemerge", status)
+        return es.get_index_operation_message(index, "forcemerge", status, client_config)
     except:
         e = sys.exc_info()[1]
         if str(e).startswith("ConnectionTimeout caused by - ReadTimeoutError(HTTPSConnectionPool"):
