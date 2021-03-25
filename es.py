@@ -239,9 +239,12 @@ def get_index_information_using_connection(client, index, elastic_connection):
 
 # Take current index number and increase by 1
 def get_rollover_index_name(current_index):
-    current_index_number = int(re.findall(r'\d+', current_index)[-1])
-    next_index_number = current_index_number + 1
-    new_index = current_index.replace(str(current_index_number), str(next_index_number))
+    current_index_number_portion = str(re.findall(r'\d+$', current_index)[0])
+    current_index_number_portion_length = len(current_index_number_portion)
+    index_prefix = current_index[0:-current_index_number_portion_length]
+    current_index_number = int(re.findall(r'\d+', current_index_number_portion)[-1])
+    next_index_number = str(current_index_number + 1)
+    new_index = index_prefix + next_index_number.zfill(current_index_number_portion_length)
     return new_index
 
 def rollover_index(client_config, index, alias):
