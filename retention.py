@@ -74,7 +74,7 @@ def apply_retention_policies(health_check_level, manual_client):
                         apply_retention_to_old_indices(indices, index_retention_policies, client_config)
                     else:
                         settings = load_settings()
-                        message = "Retention operation failed.\n\nIt is also possible that connections are unable to be made to the client/nginx node. Please fix.\n\nRemember that in order for client's to be properly build you will need to get their cluster status to **Green** or **Yellow** and then re-run the following command:\n\n**python3 /opt/cloud_operations/retention.py --client " + client_name + "**"
+                        message = "Retention operation failed.\n\nIt is also possible that connections are unable to be made to the client/nginx node. Please fix.\n\nRemember that in order for client's to be properly build you will need to get their cluster status to **Green** or **Yellow** and then re-run the following command:\n\n**python3 /opt/elastic-ilm/retention.py --client " + client_name + "**"
                         send_notification(client_config, "retention", "Failed", message, teams=settings['retention']['ms-teams'], jira=settings['retention']['jira'])
 
 if __name__ == "__main__":

@@ -122,7 +122,7 @@ def calculate_accounting(client_config, client_name):
                     return True
         else:
             settings = load_settings()
-            message = "Accounting operation failed.\n\nIt is also possible that connections are unable to be made to the client/nginx node. Please fix.\n\nRemember that in order for client's to be properly build you will need to get their cluster status to **Green** and then re-run the following command:\n\n**python3 /opt/cloud_operations/accounting.py --client " + client_name + "**"
+            message = "Accounting operation failed.\n\nIt is also possible that connections are unable to be made to the client/nginx node. Please fix.\n\nRemember that in order for client's to be properly build you will need to get their cluster status to **Green** and then re-run the following command:\n\n**python3 /opt/elastic-ilm/accounting.py --client " + client_name + "**"
             send_notification(client_config, "accounting", "Failed", message, teams=settings['accounting']['ms-teams'], jira=settings['accounting']['jira'])
             return False
 

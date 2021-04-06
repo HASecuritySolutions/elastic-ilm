@@ -78,7 +78,7 @@ def rollover_client_indicies(client_config):
                 executor.submit(apply_rollover_policy_to_alias, client_config, alias, index_rollover_policies)
     else:
         settings = load_settings()
-        message = "Rollover operation failed.\n\nIt is also possible that connections are unable to be made to the client/nginx node. Please fix.\n\nRemember that in order for client's to be properly build you will need to get their cluster status to **Green** or **Yellow** and then re-run the following command:\n\n**python3 /opt/cloud_operations/rollover.py --client " + client_config['client_name'] + "**"
+        message = "Rollover operation failed.\n\nIt is also possible that connections are unable to be made to the client/nginx node. Please fix.\n\nRemember that in order for client's to be properly build you will need to get their cluster status to **Green** or **Yellow** and then re-run the following command:\n\n**python3 /opt/elastic-ilm/rollover.py --client " + client_config['client_name'] + "**"
         send_notification(client_config, "rollover", "Failed", message, teams=settings['rollover']['ms-teams'], jira=settings['rollover']['jira'])
 
 def apply_rollover_policies(manual_client):
