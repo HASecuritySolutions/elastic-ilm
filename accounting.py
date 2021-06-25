@@ -41,7 +41,8 @@ def calculate_accounting(client_config, client_name):
             indices = es.es_get_indices(client_config)
             print("Client " + client_name + " has " + str(len(indices)) + ' indices')
 
-            accounting_records = [] 
+            accounting_records = []
+            special_index_size = 0
             # Loop through each index
             for index in indices:
                 if not es.check_special_index(index['index']):
@@ -59,7 +60,7 @@ def calculate_accounting(client_config, client_name):
                     
                     # Build client specific daily accounting records
                     # Convert index size from bytes to gigabytes
-                    index_size_in_gb = round(float(index['storeSize']) / 1024 / 1024 / 1024, 2)
+                    index_size_in_gb = round(float(index['storeSize']) / 1024 / 1024 / 1024, 5)
                     # Calculate indices daily cost
                     # If index is older than policy_days, set disk type to sata
                     # and make sure index is set to proper allocation attribute
@@ -85,8 +86,12 @@ def calculate_accounting(client_config, client_name):
                         'current_policy_days': int(policy_days)
                     }
                     accounting_records.append(accounting_record)
-            for accounting_record in accounting_records:
-                accounting_record['newest_document_date'] = str(es.get_newest_document_date_in_index(client_config, index['index'], elastic_connection).isoformat())
+                else:
+                    index_size_in_gb = round(float(index['storeSize']) / 1024 / 1024 / 1024, 5)
+                    special_index_size += index_size_in_gb
+            # Appends newest record date into accounting_record
+            #for accounting_record in accounting_records:
+                #accounting_record['newest_document_date'] = str(es.get_newest_document_date_in_index(client_config, index['index'], elastic_connection).isoformat())
             if not settings['settings']['debug'] and len(accounting_records) != 0:
                 for accounting_record in accounting_records:
                     # Create a backup copy of each accounting record
@@ -98,6 +103,32 @@ def calculate_accounting(client_config, client_name):
                 print("Debug enabled or no data to save. Not creating accounting file")
 
             elastic_connection.close()
+
+            cluster_stats = es.get_cluster_stats(client_config)
+            # Convert cluster size from bytes to gigabytes
+            cluster_size = round(float(cluster_stats['indices']['store']['size_in_bytes']) / 1024 / 1024 / 1024, 2)
+            print("Total cluster size is: " + str(cluster_size) + " GB")
+
+            with open(settings['accounting']['output_folder'] + '/' + client_name + "_accounting-" + date_time + ".json") as f:
+                accounting_file = f.readlines()
+            total_accounting_size = 0
+            for record in accounting_file:
+                json_object = json.loads(record)
+                total_accounting_size += float(json_object['size'])
+            total_accounting_size = round(total_accounting_size, 2)
+            print("Total accounting record size is: " + str(total_accounting_size) + " GB")
+
+            special_index_size = round(special_index_size, 2)
+            print("Total special index size is : " + str(special_index_size) + " GB")
+
+            total_accounting_index_size = special_index_size + total_accounting_size
+            print("Accounting and special index size equals : " + str(total_accounting_index_size) + " GB")
+
+            difference_size = cluster_size - total_accounting_index_size
+            print("Difference is " + str(difference_size) + " GB")
+            if difference_size >= 0.5:
+                message = "Accounting verification is off by more than 0.5 GB. Please find out why. This test is performed by comparing the current cluster size against the records in the accounting JSON output files."
+                send_notification(client_config, "accounting verification", "Failed", message, jira=settings['accounting']['ms-teams'], teams=settings['accounting']['jira'])
 
             if len(accounting_records) != 0 and not settings['settings']['debug'] and settings['accounting']['output_to_es']:
                 print("Sending accounting records to ES")

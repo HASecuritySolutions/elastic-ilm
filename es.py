@@ -74,7 +74,13 @@ def get_all_index_aliases(client):
     members = es.cat.aliases(format="json")
     return members
 
-def get_aliases(client_config):
+def get_cluster_stats(client):
+    es = build_es_connection(client)
+    cluster_stats = es.cluster.stats(format="json")
+    return cluster_stats
+
+def get_aliases(client):
+    es = build_es_connection(client)
     members = es.cat.aliases(format="json")
     return members
 

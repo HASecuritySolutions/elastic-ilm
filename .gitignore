@@ -2,7 +2,7 @@ data.sqlite
 todo.txt
 settings.toml
 settings.toml.backup
-client.json
-client.json.backup
+*.json.backup
 .vscode
 accounting
+*.json
