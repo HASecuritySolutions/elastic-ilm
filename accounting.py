@@ -127,7 +127,7 @@ def calculate_accounting(client_config, client_name):
             difference_size = cluster_size - total_accounting_index_size
             print("Difference is " + str(difference_size) + " GB")
             if difference_size >= 0.5:
-                message = "Accounting verification is off by more than 0.5 GB. Please find out why. This test is performed by comparing the current cluster size against the records in the accounting JSON output files."
+                message = "Accounting verification is off by more than 0.5 GB. Please find out why. This test is performed by comparing the current cluster size against the records in the accounting JSON output files.\n\nTotal cluster size is : " + str(cluster_size) + " GB\n\nTotal accounting record size is: " + str(total_accounting_size) + " GB\n\nTotal special index size is : " + str(special_index_size) + " GB\n\nAccounting and special index size equals : " + str(total_accounting_index_size) + " GB\n\nDifference is " + str(difference_size) + " GB"
                 send_notification(client_config, "accounting verification", "Failed", message, jira=settings['accounting']['ms-teams'], teams=settings['accounting']['jira'])
 
             if len(accounting_records) != 0 and not settings['settings']['debug'] and settings['accounting']['output_to_es']:
