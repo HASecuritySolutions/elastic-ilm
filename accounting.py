@@ -60,16 +60,15 @@ def calculate_accounting(client_config, client_name):
                     
                     # Build client specific daily accounting records
                     # Convert index size from bytes to gigabytes
-                    index_size_in_gb = round(float(index['storeSize']) / 1024 / 1024 / 1024, 5)
+                    index_size_in_gb = round(float(index['storeSize']) / 1024 / 1024 / 1024, 8)
                     # Calculate indices daily cost
                     # If index is older than policy_days, set disk type to sata
                     # and make sure index is set to proper allocation attribute
                     if days_ago >= policy_days:
-                        cost = round(float(index_size_in_gb) * settings['accounting']['sata_cost'], 2)
+                        cost = round(float(index_size_in_gb) * settings['accounting']['sata_cost'], 8)
                         disk_type = 'sata'
-                        # TODO - Set proper allocation attribute to move data from SSD to SATA
                     else:
-                        cost = round(float(index_size_in_gb) * settings['accounting']['ssd_cost'], 2)
+                        cost = round(float(index_size_in_gb) * settings['accounting']['ssd_cost'], 8)
                         disk_type = 'ssd'
                     index_group = es.get_index_group(index['index'])
                     accounting_record = {
@@ -87,7 +86,7 @@ def calculate_accounting(client_config, client_name):
                     }
                     accounting_records.append(accounting_record)
                 else:
-                    index_size_in_gb = round(float(index['storeSize']) / 1024 / 1024 / 1024, 5)
+                    index_size_in_gb = round(float(index['storeSize']) / 1024 / 1024 / 1024, 8)
                     special_index_size += index_size_in_gb
             # Appends newest record date into accounting_record
             #for accounting_record in accounting_records:
@@ -106,7 +105,7 @@ def calculate_accounting(client_config, client_name):
 
             cluster_stats = es.get_cluster_stats(client_config)
             # Convert cluster size from bytes to gigabytes
-            cluster_size = round(float(cluster_stats['indices']['store']['size_in_bytes']) / 1024 / 1024 / 1024, 2)
+            cluster_size = round(float(cluster_stats['indices']['store']['size_in_bytes']) / 1024 / 1024 / 1024, 8)
             print("Total cluster size is: " + str(cluster_size) + " GB")
 
             with open(settings['accounting']['output_folder'] + '/' + client_name + "_accounting-" + date_time + ".json") as f:
@@ -115,7 +114,7 @@ def calculate_accounting(client_config, client_name):
             for record in accounting_file:
                 json_object = json.loads(record)
                 total_accounting_size += float(json_object['size'])
-            total_accounting_size = round(total_accounting_size, 2)
+            total_accounting_size = round(total_accounting_size, 8)
             print("Total accounting record size is: " + str(total_accounting_size) + " GB")
 
             special_index_size = round(special_index_size, 2)
@@ -126,8 +125,8 @@ def calculate_accounting(client_config, client_name):
 
             difference_size = cluster_size - total_accounting_index_size
             print("Difference is " + str(difference_size) + " GB")
-            if difference_size >= 0.5:
-                message = "Accounting verification is off by more than 0.5 GB. Please find out why. This test is performed by comparing the current cluster size against the records in the accounting JSON output files.\n\nTotal cluster size is : " + str(cluster_size) + " GB\n\nTotal accounting record size is: " + str(total_accounting_size) + " GB\n\nTotal special index size is : " + str(special_index_size) + " GB\n\nAccounting and special index size equals : " + str(total_accounting_index_size) + " GB\n\nDifference is " + str(difference_size) + " GB"
+            if difference_size >= 1:
+                message = "Accounting verification is off by more than 1.0 GB. Please find out why. This test is performed by comparing the current cluster size against the records in the accounting JSON output files.\n\nTotal cluster size is : " + str(cluster_size) + " GB\n\nTotal accounting record size is: " + str(total_accounting_size) + " GB\n\nTotal special index size is : " + str(special_index_size) + " GB\n\nAccounting and special index size equals : " + str(total_accounting_index_size) + " GB\n\nDifference is " + str(difference_size) + " GB"
                 send_notification(client_config, "accounting verification", "Failed", message, jira=settings['accounting']['ms-teams'], teams=settings['accounting']['jira'])
 
             if len(accounting_records) != 0 and not settings['settings']['debug'] and settings['accounting']['output_to_es']:
