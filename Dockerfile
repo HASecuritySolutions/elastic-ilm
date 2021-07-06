@@ -10,7 +10,7 @@ RUN apt update&& \
 RUN cd /opt && \
     git clone https://github.com/HASecuritySolutions/elastic-ilm.git && \
     cd /opt/elastic-ilm && \
-    pipenv install 
+    pip install -r requirements.txt
 
 COPY ./settings.toml.example /opt/elastic-ilm/settings.toml
 COPY ./client.json.example /opt/elastic-ilm/client.json
@@ -23,4 +23,4 @@ WORKDIR /opt/elastic-ilm
 USER elastic-ilm
 STOPSIGNAL SIGTERM
 
-CMD /usr/bin/pipenv run python ilm.py --manual 1
+CMD /usr/bin/python /opt/elastic-ilm/ilm.py --manual 1
