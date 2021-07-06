@@ -9,14 +9,16 @@ RUN apt update&& \
 
 RUN cd /opt && \
     git clone https://github.com/HASecuritySolutions/elastic-ilm.git && \
-    cd /opt/elastic-ilm && \
-    pip install -r requirements.txt
+    cd /opt/elastic-ilm
 
 COPY ./settings.toml.example /opt/elastic-ilm/settings.toml
 COPY ./client.json.example /opt/elastic-ilm/client.json
+COPY ./requirements.txt /opt/elastic-ilm/requirements.txt
 
-RUN useradd -ms /bin/bash elastic-ilm \
-    && chown -R elastic-ilm:elastic-ilm /opt/elastic-ilm
+RUN cd /opt/elastic-ilm && \
+    pip install -r requirements.txt && \
+    useradd -ms /bin/bash elastic-ilm && \
+    chown -R elastic-ilm:elastic-ilm /opt/elastic-ilm
 
 WORKDIR /opt/elastic-ilm
 
