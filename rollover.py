@@ -4,7 +4,7 @@ from error import send_notification
 import es
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-import threading
+import time
 
 def get_rollover_policy(client_config):
     # Grab the client's rollover policies
@@ -68,18 +68,30 @@ def rollover_client_indicies(client_config):
     settings = load_settings()
     # Get the rollover policy for the client
     index_rollover_policies = get_rollover_policy(client_config)
-    # Check cluster health - Expect Yellow to continue
-    if es.check_cluster_health_status(client_config, settings['rollover']['health_check_level']):
-        # Get current aliases members
-        aliases = es.get_all_index_aliases(client_config)
-        with ThreadPoolExecutor(max_workers=es.get_lowest_data_node_thread_count(client_config)) as executor:
-            # Apply rollover to aliases
-            for alias in aliases:
-                executor.submit(apply_rollover_policy_to_alias, client_config, alias, index_rollover_policies)
-    else:
-        settings = load_settings()
-        message = "Rollover operation failed.\n\nIt is also possible that connections are unable to be made to the client/nginx node. Please fix.\n\nRemember that in order for client's to be properly build you will need to get their cluster status to **Green** or **Yellow** and then re-run the following command:\n\n**python3 /opt/elastic-ilm/rollover.py --client " + client_config['client_name'] + "**"
-        send_notification(client_config, "rollover", "Failed", message, teams=settings['rollover']['ms-teams'], jira=settings['rollover']['jira'])
+    retry_count = 60
+    sleep_time = 60
+    success = 0
+    while retry_count >= 0 and success == 0:
+        # Check cluster health - Expect Yellow to continue
+        if es.check_cluster_health_status(client_config, settings['rollover']['health_check_level']):
+            # Get current aliases members
+            aliases = es.get_all_index_aliases(client_config)
+            with ThreadPoolExecutor(max_workers=es.get_lowest_data_node_thread_count(client_config)) as executor:
+                # Apply rollover to aliases
+                for alias in aliases:
+                    executor.submit(apply_rollover_policy_to_alias, client_config, alias, index_rollover_policies)
+            success = 1
+        else:
+            if retry_count > 0:
+                print("Rollover operation failed for " + client_config['client_name'] + ". Cluster health does not meet level:  " + settings['rollover']['health_check_level'])
+            else:
+                message = "Rollover operation failed.\n\nIt is also possible that connections are unable to be made to the client/nginx node. Please fix.\n\nRemember that in order for client's to be properly build you will need to get their cluster status to **Green** or **Yellow** and then re-run the following command:\n\n**python3 /opt/elastic-ilm/rollover.py --client " + client_config['client_name'] + "**"
+                send_notification(client_config, "rollover", "Failed", message, teams=settings['rollover']['ms-teams'], jira=settings['rollover']['jira'])
+        if success == 0:
+            # Decrese retry count by one before trying while statement again
+            retry_count = retry_count - 1
+            print("Retry attempts left for rollover operation set to " + str(retry_count) + " sleeping for " + str(sleep_time) + " seconds")
+            time.sleep(sleep_time)
 
 def apply_rollover_policies(manual_client):
     settings = load_settings()

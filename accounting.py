@@ -152,8 +152,7 @@ def calculate_accounting(client_config, client_name):
                     return True
         else:
             settings = load_settings()
-            message = "Accounting operation failed.\n\nIt is also possible that connections are unable to be made to the client/nginx node. Please fix.\n\nRemember that in order for client's to be properly build you will need to get their cluster status to **Green** and then re-run the following command:\n\n**python3 /opt/elastic-ilm/accounting.py --client " + client_name + "**"
-            send_notification(client_config, "accounting", "Failed", message, teams=settings['accounting']['ms-teams'], jira=settings['accounting']['jira'])
+            print("Accounting operation failed for " + client_name + ". Cluster health does not meet level:  " + settings['accounting']['health_check_level'])
             return False
 
 def run_accounting(manual_client):
@@ -183,7 +182,6 @@ def run_accounting(manual_client):
                     client_config = clients[client]
                     if retry_count == 0:
                         # If on the last attempt, accept a health level of yellow
-                        health_check_level = settings['accounting']['fallback_health_check_level']
                         message = "Accounting operation failed.\n\nDue to failing 10 times, the health level was set to " + settings['accounting']['fallback_health_check_level'] + " and ran for client " + clients[client]['client_name'] + ". \n\nThis is not optimal. Please check to see if data should be purged and re-inserted with a green cluster."
                         send_notification(clients[client], "accounting", "Failed", message, jira=settings['accounting']['ms-teams'], teams=settings['accounting']['jira'])
                     # If client set at command line only run it otherwise
