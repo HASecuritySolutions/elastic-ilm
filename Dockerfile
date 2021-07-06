@@ -13,7 +13,6 @@ RUN cd /opt && \
 
 COPY ./settings.toml.example /opt/elastic-ilm/settings.toml
 COPY ./client.json.example /opt/elastic-ilm/client.json
-COPY ./requirements.txt /opt/elastic-ilm/requirements.txt
 
 RUN cd /opt/elastic-ilm && \
     pip install -r requirements.txt && \
