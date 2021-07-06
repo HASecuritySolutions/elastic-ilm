@@ -1,0 +1,22 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+sd-notify = "*"
+numpy = "*"
+schedule = "*"
+pandas = "*"
+scipy = "*"
+pymsteams = "*"
+toml = "*"
+ipykernel = "*"
+jupyter = "*"
+elasticsearch = "*"
+elasticsearch-dsl = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.8"
