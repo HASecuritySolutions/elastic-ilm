@@ -259,7 +259,7 @@ def rollover_index(client_config, index, alias):
     try:
         es = build_es_connection(client_config)
         if client_config['platform'] == "opensearch":
-            status = es.rollover(alias)
+            status = es.indices.rollover(alias)
             return get_index_operation_message(index, "rollover", status, client_config)
         else:
             indices = []

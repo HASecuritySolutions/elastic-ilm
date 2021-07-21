@@ -25,7 +25,7 @@ def load_configs():
         if file.endswith(".json"):
             with open(settings['settings']['client_json_folder'] + '/' + file) as f:
                 client = json.load(f)
-            if client['client_name']:
+            if 'client_name' in client:
                 client_name = client['client_name']
             else:
                 print("File name " + file + " does not contain valid client information")
