@@ -24,4 +24,4 @@ WORKDIR /opt/elastic-ilm
 USER elastic-ilm
 STOPSIGNAL SIGTERM
 
-CMD /usr/local/bin/python /opt/elastic-ilm/ilm.py --manual 1
+CMD git pull && /usr/local/bin/python /opt/elastic-ilm/ilm.py --manual 1
