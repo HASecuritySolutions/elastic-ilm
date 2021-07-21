@@ -179,7 +179,9 @@ def check_special_index(index):
         special = True
     if str(index).startswith(".kibana"):
         special = True
-    if str(index).startswith(".skedler"):
+    if str(index).startswith(".opensearch"):
+        special = True
+    if str(index).startswith(".opendistro"):
         special = True
     if str(index).startswith(".tasks"):
         special = True
