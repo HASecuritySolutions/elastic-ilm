@@ -258,29 +258,33 @@ def get_rollover_index_name(current_index):
 def rollover_index(client_config, index, alias):
     try:
         es = build_es_connection(client_config)
-        indices = []
-        # Check if index is a single string or a list of indices
-        if isinstance(index, str):
-            indices.append(index)
-        if isinstance(index, list):
-            indices = index
-        for index in indices:
-            new_index = get_rollover_index_name(index)
-            status = es.indices.create(index=new_index, ignore=400)
-            if 'acknowledged' in status:
-                if status['acknowledged']:
-                    # Update writeable index
-                    status = es.indices.update_aliases({
-                    "actions": [
-                        { "remove":    { "index": index, "alias": alias }}, 
-                        { "add": { "index": index, "alias": alias, "is_write_index": "false"  }}, 
-                        { "add":    { "index": new_index, "alias": alias, "is_write_index": "true"  }}  
-                    ]
-                    })
-                    return get_index_operation_message(index, "rollover", status, client_config)
-            else:
-                print("Failed to create new index" + str(new_index) + " for rollover index")
-                return False
+        if client_config['platform'] == "opensearch":
+            status = es.rollover(alias)
+            return get_index_operation_message(index, "rollover", status, client_config)
+        else:
+            indices = []
+            # Check if index is a single string or a list of indices
+            if isinstance(index, str):
+                indices.append(index)
+            if isinstance(index, list):
+                indices = index
+            for index in indices:
+                new_index = get_rollover_index_name(index)
+                status = es.indices.create(index=new_index, ignore=400)
+                if 'acknowledged' in status:
+                    if status['acknowledged']:
+                        # Update writeable index
+                        status = es.indices.update_aliases({
+                        "actions": [
+                            { "remove":    { "index": index, "alias": alias }}, 
+                            { "add": { "index": index, "alias": alias, "is_write_index": "false"  }}, 
+                            { "add":    { "index": new_index, "alias": alias, "is_write_index": "true"  }}  
+                        ]
+                        })
+                        return get_index_operation_message(index, "rollover", status, client_config)
+                else:
+                    print("Failed to create new index " + str(new_index) + " for rollover index")
+                    return False
         es.close()
     except:
         e = sys.exc_info()
