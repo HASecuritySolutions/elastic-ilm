@@ -1,4 +1,4 @@
-FROM python:3.10.0b4-slim
+FROM python:3.8.7-slim
 
 LABEL description="H & A Security Solutions Elastic ILM"
 LABEL maintainer="Justin Henderson -justin@hasecuritysolutions.com"
