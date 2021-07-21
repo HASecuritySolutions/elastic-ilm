@@ -38,6 +38,12 @@ if __name__ == "__main__":
     settings = load_settings()
     if manual == 0:
         notify.ready()
+    
+    # On service startup, immediately run retention, rollover, and accounting
+    apply_retention_policies(manual_client)
+    apply_rollover_policies(manual_client)
+    run_accounting(manual_client)
+
     if settings['accounting']['enabled']:
         schedule.every(settings['accounting']['minutes_between_run']).minutes.do(run_threaded, run_accounting, "")
     if settings['retention']['enabled']:
