@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers
+from elasticsearch_dsl import Search
 from elasticsearch.connection import create_ssl_context
 from error import send_jira_event, send_ms_teams_message, send_notification
 import ssl
@@ -14,6 +15,75 @@ from datetime import datetime
 from sys import stdout
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+def build_search(es_connection, index, query, sort='@timestamp', limit_to_fields=[]):
+	"""[summary]
+
+	Args:
+		index ([string]): [Index pattern to search against]
+		query ([string]): [Lucene query to limit results]
+		sort (str, optional): [Sort filter]. Defaults to '@timestamp'.
+		limit_to_fields (list, optional): [Limit which fields to return]. Defaults to [].
+
+	Returns:
+		[type]: [description]
+	"""
+	search = Search(using=es_connection, index=index, doc_type='_doc')
+	search = search.query('query_string', query=query)
+	if len(limit_to_fields) != 0:
+		search = search.source(limit_to_fields)
+	search = search.sort(sort)
+	return search
+
+def build_aggregation(search, name, aggregation_type, filter, metric_name,\
+	metric, metric_field, size=10):
+	"""[summary]
+
+	Args:
+		name ([string]): [Name of aggregation]
+		aggregation_type ([string]): [Type of aggregation such as terms]
+		filter ([string]): [Name of field or filter to apply aggregation with]
+		metric_name ([string]): [Name to apply to metric]
+		metric ([string]): [The type of metric being applied such as sum or avg]
+		metric_field ([string]): [The field to apply the metric against]
+		size (int, optional): [Max results to return]. Defaults to 10.
+
+	Returns:
+		[object]: [Returns Elasticsearch object with aggregation added]
+	"""
+	search.aggs.bucket(name, aggregation_type, field=filter, size=size)
+	search.aggs.metric(metric_name, metric, field=metric_field)
+	return Search
+
+def aggregate_search(es_connection, index_pattern, search_query, aggregation_type, aggregation_field, sort='@timestamp', limit_to_fields=[], date_start='now-1d/d', date_end='now'):
+    s = Search(using=es_connection, index=index_pattern, doc_type='_doc')
+    s = s.query('query_string', query=search_query)
+    if len(limit_to_fields) != 0:
+	    s = s.source(limit_to_fields)
+    s = s.sort(sort)
+    s = s.filter('range', **{'@timestamp': {'gte': date_start, 'lt': date_end}})
+    # The four lines above could be summarized into the line below based on your preference:
+    # s = Search(using=es_connection, index='lab4.1-complete', doc_type='_doc').query('query_string', query='tags:internal_source').source(['source_ip']).sort('source_ip')
+    s.aggs.bucket(aggregation_field, 'terms', field=aggregation_field, size=999999).metric('Count', aggregation_type, field=aggregation_field)
+    response = s.execute()
+    return [ x['key'] for x in response.aggregations[aggregation_field].buckets ]
+
+def multiple_aggregate_search(es_connection, index_pattern, search_query, aggregation_type, aggregation_field_one, aggregation_field_two, sort='@timestamp', limit_to_fields=[], date_start='now-1d/d', date_end='now'):
+    s = Search(using=es_connection, index=index_pattern, doc_type='_doc')
+    s = s.query('query_string', query=search_query)
+    if len(limit_to_fields) != 0:
+	    s = s.source(limit_to_fields)
+    s = s.sort(sort)
+    s = s.filter('range', **{'@timestamp': {'gte': date_start, 'lt': date_end}})
+    # The four lines above could be summarized into the line below based on your preference:
+    # s = Search(using=es_connection, index='lab4.1-complete', doc_type='_doc').query('query_string', query='tags:internal_source').source(['source_ip']).sort('source_ip')
+    s.aggs.bucket(aggregation_field_one, 'terms', field=aggregation_field_one, size=999999).metric('Count', aggregation_type, field=aggregation_field_one)
+    s.aggs.bucket(aggregation_field_two, 'terms', field=aggregation_field_two, size=999999).metric('Count', aggregation_type, field=aggregation_field_two)
+    response = s.execute()
+    aggregation_one = [ x['key'] for x in response.aggregations[aggregation_field_one].buckets ]
+    aggregation_two = [ x['key'] for x in response.aggregations[aggregation_field_two].buckets ]
+    return { aggregation_one[i]: aggregation_two[i] for i in range(len(aggregation_one)) }
+    return list(zip([ x['key'] for x in response.aggregations[aggregation_field_one].buckets ], [ x['key'] for x in response.aggregations[aggregation_field_two].buckets ]))
 
 def check_index_allocation_policy(index, policies):
     match_found = 0

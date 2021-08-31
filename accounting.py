@@ -88,6 +88,88 @@ def calculate_accounting(client_config, client_name):
                 else:
                     index_size_in_gb = round(float(index['storeSize']) / 1024 / 1024 / 1024, 8)
                     special_index_size += index_size_in_gb
+            # Check TOML for device tracking settings, if exists, calculate
+            if 'device_tracking_inclusion' in settings['accounting']:
+                device_by_ip = []
+                device_by_computer_name = []
+                device_by_user = []
+                total_devices = 0
+                for inclusion in settings['accounting']['device_tracking_inclusion']:
+                    index = settings['accounting']['device_tracking_inclusion'][inclusion]['index']
+                    tracking_field = settings['accounting']['device_tracking_inclusion'][inclusion]['tracking_field']
+                    search = settings['accounting']['device_tracking_inclusion'][inclusion]['search']
+                    count_as = settings['accounting']['device_tracking_inclusion'][inclusion]['count_as']
+                    
+                    response = es.aggregate_search(elastic_connection, index, search, 'value_count', tracking_field, sort='@timestamp', limit_to_fields=[tracking_field])
+                    if count_as == "computer":
+                        device_by_computer_name += response
+                    if count_as == "ip":
+                        device_by_ip += response
+                    if count_as == "user":
+                        device_by_user += response
+            if 'device_tracking_exclusion' in settings['accounting']:
+                for exclusion in settings['accounting']['device_tracking_exclusion']:
+                    index = settings['accounting']['device_tracking_exclusion'][exclusion]['index']
+                    field_to_exclude_against = settings['accounting']['device_tracking_exclusion'][exclusion]['field_to_exclude_against']
+                    field_to_match_against = settings['accounting']['device_tracking_exclusion'][exclusion]['field_to_match_against']
+                    field_to_match_against_count_as_type = settings['accounting']['device_tracking_exclusion'][exclusion]['field_to_match_against_count_as_type']
+                    search = settings['accounting']['device_tracking_exclusion'][exclusion]['search']
+                    count_as = settings['accounting']['device_tracking_exclusion'][exclusion]['count_as']
+                    response = es.multiple_aggregate_search(elastic_connection, index, search, 'value_count', field_to_match_against, field_to_exclude_against, sort='@timestamp', limit_to_fields=[field_to_exclude_against,field_to_match_against])
+
+                    if field_to_match_against_count_as_type == "computer":
+                        # Look for computers in device_by_computer_name, if found
+                        # remove response value from field_to_exclude_against
+                        for computer in response.keys():
+                            if computer in device_by_computer_name:
+                                print(f"Removing {computer} from {field_to_exclude_against}")
+                                exclusion = response[computer]
+                                if field_to_exclude_against == "ip":
+                                    device_by_ip.pop(exclusion)
+                                if field_to_exclude_against == "computer":
+                                    device_by_computer_name.pop(exclusion)
+                                if field_to_exclude_against == "user":
+                                    device_by_user.pop(exclusion)
+                    if field_to_match_against_count_as_type == "ip":
+                        # Look for ips in device_by_ip, if found
+                        # remove response value from field_to_exclude_against
+                        for ip in response.keys():
+                            print(ip)
+                            if ip in device_by_computer_name:
+                                print(f"Removing {ip} from {field_to_exclude_against}")
+                                exclusion = response[ip]
+                                if field_to_exclude_against == "ip":
+                                    device_by_ip.pop(exclusion)
+                                if field_to_exclude_against == "computer":
+                                    device_by_computer_name.pop(exclusion)
+                                if field_to_exclude_against == "user":
+                                    device_by_user.pop(exclusion)
+                    if field_to_match_against_count_as_type == "user":
+                        # Look for users in device_by_user, if found
+                        # remove response value from field_to_exclude_against
+                        for user in response.keys():
+                            if user in device_by_computer_name:
+                                print(f"Removing {user} from {field_to_exclude_against}")
+                                exclusion = response[user]
+                                if field_to_exclude_against == "ip":
+                                    device_by_ip.pop(exclusion)
+                                if field_to_exclude_against == "computer":
+                                    device_by_computer_name.pop(exclusion)
+                                if field_to_exclude_against == "user":
+                                    device_by_user.pop(exclusion)
+                device_by_user_count = len(set(device_by_user))
+                device_by_computer_name_count = len(set(device_by_computer_name))
+                device_by_ip_count = len(set(device_by_ip))
+                total_devices = device_by_user_count + device_by_computer_name_count + device_by_ip_count
+                accounting_record = {
+                        'client': client_name,
+                        'device_count': int(total_devices),
+                        '@timestamp': str(current_date.isoformat()),
+                    }
+                with open(settings['accounting']['output_folder'] + '/' + client_name + "_accounting-device-" + date_time + ".json", 'a') as f:
+                    json_content = json.dumps(accounting_record)
+                    f.write(json_content)
+                    f.write('\n')
             # Appends newest record date into accounting_record
             #for accounting_record in accounting_records:
                 #accounting_record['newest_document_date'] = str(es.get_newest_document_date_in_index(client_config, index['index'], elastic_connection).isoformat())
@@ -107,7 +189,9 @@ def calculate_accounting(client_config, client_name):
             # Convert cluster size from bytes to gigabytes
             cluster_size = round(float(cluster_stats['indices']['store']['size_in_bytes']) / 1024 / 1024 / 1024, 8)
             print("Total cluster size is: " + str(cluster_size) + " GB")
-
+            if 'device_tracking_inclusion' in settings['accounting']:
+                print(f"Total device tracking is {total_devices}")
+                
             with open(settings['accounting']['output_folder'] + '/' + client_name + "_accounting-" + date_time + ".json") as f:
                 accounting_file = f.readlines()
             total_accounting_size = 0
