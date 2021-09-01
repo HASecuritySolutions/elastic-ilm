@@ -16,7 +16,8 @@ pymsteams = "*"
 toml = "*"
 ipykernel = "*"
 jupyter = "*"
-elasticsearch-dsl = "*"
+elasticsearch-dsl <= "7.10.2"
+elasticsearch <= "7.10.2"
 
 [dev-packages]
 

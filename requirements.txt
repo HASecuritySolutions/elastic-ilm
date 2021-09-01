@@ -7,5 +7,5 @@ pymsteams
 toml
 ipykernel
 jupyter
-elasticsearch
-elasticsearch-dsl
+elasticsearch<=7.10.2
+elasticsearch-dsl<=7.10.2
