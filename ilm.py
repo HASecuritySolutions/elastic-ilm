@@ -4,6 +4,7 @@ import sd_notify
 import threading
 from config import load_settings
 from accounting import run_accounting
+from custom_checks import run_custom_checks
 from retention import apply_retention_policies
 from rollover import apply_rollover_policies
 import time
@@ -46,6 +47,16 @@ if __name__ == "__main__":
 
     if settings['accounting']['enabled']:
         schedule.every(settings['accounting']['minutes_between_run']).minutes.do(run_threaded, run_accounting, "")
+    #if settings['custom_checks']['enabled']:
+    #    schedule.every(settings['custom_checks']['minutes_between_run']).minutes.do(run_threaded, run_custom_checks, "")
+    # Example client info entry
+    # "custom_checks": {
+    #     "0": {
+    #     "check": "/bin/bash /opt/elastic_stack/scripts/verify_acuity_custom_service.sh",
+    #     "remediate": "/bin/bash /opt/elastic_stack/scripts/restart_acuity_custom_service.sh",
+    #     "schedule": "15"
+    #     }
+    # },
     if settings['retention']['enabled']:
         schedule.every(settings['retention']['minutes_between_run']).minutes.do(run_threaded, apply_retention_policies, settings['retention']['health_check_level'], manual_client)
     if settings['rollover']['enabled']:
