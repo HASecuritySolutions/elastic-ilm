@@ -9,7 +9,7 @@ notification = False
 
 settings = load_settings()
 
-def validate_backup_repo_exists():
+def validate_backup_repo_exists(client_config):
   if 'backup' in settings:
     if 'backup_repo' in settings['backup']:
       repo = settings['backup']['backup_repo']
@@ -115,9 +115,10 @@ def run_backup(manual_client):
       client_config = clients[client]
       
       if validate_backup_enabled():
-        backup_policy = get_backup_policy(client_config)
-        apply_backup_retention_policies(client_config, backup_policy)
-        take_snapshot_per_policies(client_config, backup_policy)
+        if validate_backup_repo_exists(client_config):
+          backup_policy = get_backup_policy(client_config)
+          apply_backup_retention_policies(client_config, backup_policy)
+          take_snapshot_per_policies(client_config, backup_policy)
 
 if __name__ == "__main__":
     import argparse

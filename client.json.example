@@ -28,6 +28,10 @@
       "global": 90,
       ".monitoring": 7,
       "demo-suricata": 0
+    },
+    "backup": {
+      "global": 0,
+      ".kibana": 30
     }
   }
 }
