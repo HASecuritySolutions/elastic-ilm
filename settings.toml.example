@@ -53,6 +53,12 @@ health_check_level = 'yellow'
 ms-teams = true
 jira = false
 
+[backup]
+enabled = true
+minutes_between_run = 30
+backup_repo = 'backup'
+health_check_level = 'yellow'
+
 [accounting]
 # Needs to be true or false with no quotes
 enabled = false 
