@@ -121,6 +121,10 @@ def run_backup(manual_client):
           print("Processing backups for " + client_config['client_name'])
           apply_backup_retention_policies(client_config, backup_policy)
           take_snapshot_per_policies(client_config, backup_policy)
+        else:
+          print("Backup repo not found")
+      else:
+        print("Backups not enabled")
 
 if __name__ == "__main__":
     import argparse
