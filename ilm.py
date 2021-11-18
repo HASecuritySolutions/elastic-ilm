@@ -41,10 +41,11 @@ if __name__ == "__main__":
     if manual == 0:
         notify.ready()
     
-    # On service startup, immediately run retention, rollover, and accounting
+    # On service startup, immediately run retention, rollover, backup, and accounting
     apply_retention_policies(settings['retention']['health_check_level'], manual_client)
     apply_rollover_policies(manual_client)
     run_accounting(manual_client)
+    run_backup(manual_client)
 
     if settings['accounting']['enabled']:
         schedule.every(settings['accounting']['minutes_between_run']).minutes.do(run_threaded, run_accounting, "")
