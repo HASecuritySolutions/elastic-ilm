@@ -49,9 +49,10 @@ def validate_backup_enabled():
 
 def apply_backup_retention_policies(client_config, backup_policy):
   elastic_connection = es.build_es_connection(client_config)
-  snapshots = elastic_connection.snapshot.get(settings['backup']['backup_repo'], "*")
+  snapshots = elastic_connection.snapshot.get(settings['backup']['backup_repo'], '_all')
   for snapshot in snapshots['snapshots']:
     snapshot_name = snapshot['snapshot'][:-17]
+    print(snapshot_name)
     snapshot_age = datetime.strptime(snapshot['snapshot'][len(snapshot_name)+1:], '%Y-%m-%d_%H:%M')
     current_date = datetime.utcnow()
     days_ago = (current_date - snapshot_age).days
