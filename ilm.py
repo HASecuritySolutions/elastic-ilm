@@ -4,9 +4,10 @@ import sd_notify
 import threading
 from config import load_settings
 from accounting import run_accounting
-from custom_checks import run_custom_checks
+#from custom_checks import run_custom_checks
 from retention import apply_retention_policies
 from rollover import apply_rollover_policies
+from backup import run_backup
 import time
 import argparse
 from argparse import RawTextHelpFormatter
@@ -47,6 +48,8 @@ if __name__ == "__main__":
 
     if settings['accounting']['enabled']:
         schedule.every(settings['accounting']['minutes_between_run']).minutes.do(run_threaded, run_accounting, "")
+    if settings['backup']['enabled']:
+        schedule.every(settings['backup']['minutes_between_run']).minutes.do(run_threaded, run_backup, "")
     #if settings['custom_checks']['enabled']:
     #    schedule.every(settings['custom_checks']['minutes_between_run']).minutes.do(run_threaded, run_custom_checks, "")
     # Example client info entry

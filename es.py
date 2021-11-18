@@ -1,8 +1,17 @@
 #!/usr/bin/env python3
-from elasticsearch import Elasticsearch
-from elasticsearch import helpers
-from elasticsearch_dsl import Search
-from elasticsearch.connection import create_ssl_context
+import os
+from config import load_settings
+settings = load_settings()
+if settings['settings']['distro'] == 'opensearch':
+  from opensearchpy import OpenSearch as Elasticsearch
+  from opensearchpy import helpers
+  from opensearch_dsl import Search
+  from opensearchpy.connection import create_ssl_context
+else:
+  from elasticsearch import Elasticsearch
+  from elasticsearch import helpers
+  from elasticsearch_dsl import Search
+  from elasticsearch.connection import create_ssl_context
 from error import send_jira_event, send_ms_teams_message, send_notification
 import ssl
 from itertools import islice

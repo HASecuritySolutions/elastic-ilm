@@ -18,17 +18,28 @@ def load_settings():
         exit()
     return settings
 
-def load_configs():
+def load_configs(client_value=""):
     settings = load_settings()
     clients = {}
     for file in os.listdir(settings['settings']['client_json_folder']):
-        if file.endswith(".json"):
-            with open(settings['settings']['client_json_folder'] + '/' + file) as f:
-                client = json.load(f)
-            if 'client_name' in client:
-                client_name = client['client_name']
-            else:
-                print("File name " + file + " does not contain valid client information")
-                sys.exit(1)
-            clients[client_name] = client
+        if client_value != "":
+            if file.endswith(".json") and file.startswith(str(client_value)):
+                with open(settings['settings']['client_json_folder'] + '/' + file) as f:
+                    client = json.load(f)
+                if 'client_name' in client:
+                    client_name = client['client_name']
+                else:
+                    print("File name " + file + " does not contain valid client information")
+                    sys.exit(1)
+                clients[client_name] = client
+        else:
+            if file.endswith(".json"):
+                with open(settings['settings']['client_json_folder'] + '/' + file) as f:
+                    client = json.load(f)
+                if 'client_name' in client:
+                    client_name = client['client_name']
+                else:
+                    print("File name " + file + " does not contain valid client information")
+                    sys.exit(1)
+                clients[client_name] = client
     return clients
