@@ -91,6 +91,7 @@ def take_snapshot_per_policies(client_config, backup_policy):
         if es.check_cluster_health_status(client_config, settings['backup']['health_check_level']):
           elastic_connection = es.build_es_connection(client_config)
           current_date = datetime.strftime(datetime.utcnow(), '%Y-%m-%d_%H:%M')
+          print(f"Triggering backup for {index_name}*")
           backup_job = elastic_connection.snapshot.create(settings['backup']['backup_repo'], snapshot=f"{index_name}_{current_date}", body=body, wait_for_completion=False)
           elastic_connection.close()
           if 'accepted' in backup_job:
@@ -117,6 +118,7 @@ def run_backup(manual_client):
       if validate_backup_enabled():
         if validate_backup_repo_exists(client_config):
           backup_policy = get_backup_policy(client_config)
+          print("Processing backups for " + client_config['client_name'])
           apply_backup_retention_policies(client_config, backup_policy)
           take_snapshot_per_policies(client_config, backup_policy)
 
