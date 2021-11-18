@@ -2,7 +2,7 @@
 import os
 from config import load_settings
 settings = load_settings()
-if settings['settings']['distro'] == 'opensearch':
+if os.getenv('ILM_PLATFORM') == 'opensearch':
   from opensearchpy import OpenSearch as Elasticsearch
   from opensearchpy import helpers
   from opensearch_dsl import Search
