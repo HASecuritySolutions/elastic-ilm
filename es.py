@@ -280,6 +280,8 @@ def check_special_index(index):
         special = True
     if str(index).startswith(".readonlyrest"):
         special = True
+    if str(index).startswith(".signal"):
+        special = True
     if str(index).startswith("elastalert"):
         special = True
     return special
