@@ -258,6 +258,12 @@ def check_special_index(index):
         special = True
     if str(index).startswith(".kibana"):
         special = True
+    if str(index).startswith(".async"):
+        special = True
+    if str(index).startswith(".fleet"):
+        special = True
+    if str(index).startswith(".reporting"):
+        special = True
     if str(index).startswith(".opensearch"):
         special = True
     if str(index).startswith(".opendistro"):
