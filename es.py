@@ -262,6 +262,8 @@ def check_special_index(index):
         special = True
     if str(index).startswith(".opendistro"):
         special = True
+    if str(index).startswith(".security"):
+        special = True
     if str(index).startswith(".tasks"):
         special = True
     if str(index).startswith(".apm"):
