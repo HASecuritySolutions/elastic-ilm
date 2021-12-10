@@ -379,8 +379,8 @@ def run_backup(manual_client):
                     take_snapshot_per_policies(client_config, job, backup_policy[job], repository, include_special=backup_policy[job]['include_special'])
                   else:
                     take_snapshot_per_policies(client_config, job, backup_policy[job], repository)
-        else:
-          print("Backup repo not found")
+          else:
+            print(f"Backup repo not found - {repository}")
       else:
         print("Backups not enabled")
 
