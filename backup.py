@@ -18,12 +18,13 @@ settings = load_settings()
 special_indices_to_backup = [".kibana",".opendistro",".opensearch"]
 
 @retry(Exception, tries=6, delay=10)
-def validate_backup_repo_exists(client_config):
+def validate_backup_repo_exists(client_config, repository):
   """[summary]
   Validates backup repository exists in ES/OS
 
   Args:
       client_config ([dict]): [Client configuration]
+      repository ([str]): [Repository to verify exists]
 
   Raises:
       Exception: [On error, print error and retry]
@@ -31,25 +32,20 @@ def validate_backup_repo_exists(client_config):
   Returns:
       [bool]: [Does backup repository exist]
   """
-  if 'backup' in settings:
-    if 'backup_repo' in settings['backup']:
-      repo = settings['backup']['backup_repo']
-    else:
-      print("No backup repository defined in settings.toml")
-      return False
-    try:
-      elastic_connection = es.build_es_connection(client_config)
-      repositories = elastic_connection.cat.repositories(format='json')
-      elastic_connection.close()
-      for repository in repositories:
-        if repo == repository['id']:
-          return True
-    except Exception as e:
-      elastic_connection.close()
-      print("Operation failed - Validate backup repo exists")
-      raise Exception(e)
+  try:
+    elastic_connection = es.build_es_connection(client_config)
+    repositories = elastic_connection.cat.repositories(format='json')
+    elastic_connection.close()
+    for record in repositories:
+      if repository == record['id']:
+        print(f"Backup repository {repository} exists and is registered")
+        return True
+  except Exception as e:
+    elastic_connection.close()
+    print("Operation failed - Validate backup repo exists")
+    raise Exception(e)
   # If it makes it this far the repo does not exist, fail
-  print(f"Backup repository {repo} not registered")
+  print(f"Backup repository {repository} not registered")
   return False
 
 def get_backup_policy(client_config, repository):
@@ -76,23 +72,19 @@ def get_repositories(client_config):
         repositories.append(repository)
   return repositories
 
-def validate_backup_enabled():
+def validate_backup_enabled(client_config):
   """[summary]
-  Validates backup configuration found in settings.toml
+  Validates backup configuration found in client_info.json
 
   Returns:
       [bool]: [Does backup section exist]
   """
-  if 'backup' in settings:
-    if settings['backup']['enabled']:
-      if 'health_check_level' in settings['backup']:
-        return True
-      else:
-        return False
+  if 'policy' in client_config:
+    if 'backup' in client_config['policy']:
+      return True
     else:
       return False
-  else:
-    return False
+  return False
 
 @retry(Exception, tries=6, delay=10)
 def get_snapshots_in_repository(client_config, repository):
@@ -121,7 +113,7 @@ def get_snapshots_in_repository(client_config, repository):
   elastic_connection.close()
   return snapshots
 
-@retry(Exception, tries=360, delay=10)
+@retry(Exception, tries=60, delay=10)
 def delete_snapshot_in_repository(client_config, repository, snapshot):
   """[summary]
   Deletes a snapshot from a backup repository
@@ -201,7 +193,7 @@ def apply_backup_retention_policies(client_config, job, retention, repository):
           print(message)
           send_notification(client_config, "backup", "Failed", message, teams=settings['backup']['ms-teams'], jira=settings['backup']['jira'])  
 
-@retry(Exception, tries=360, delay=10)
+@retry(Exception, tries=60, delay=10)
 def take_snapshot(client_config, repository, snapshot, body):
   """[summary]
   Creates a backup snapshot
@@ -246,7 +238,7 @@ def take_snapshot(client_config, repository, snapshot, body):
     print("Operation failed - Create snapshot " + snapshot + " for repo " + repository)
     raise Exception(e)
 
-@retry(Exception, tries=12, delay=1)
+@retry(Exception, tries=12, delay=10)
 def get_indices_within_limit_age(client_config, indices, limit_age):
   """[summary]
   Takes a list of indices and looks to see if the most recent document
@@ -369,12 +361,12 @@ def run_backup(manual_client):
     if settings['settings']['limit_to_client'] == client or settings['settings']['limit_to_client'] == "":
       client_config = clients[client]
       
-      if validate_backup_enabled():
-        if validate_backup_repo_exists(client_config):
-          # Get repositories listed in backup policy section
-          repositories = get_repositories(client_config)
-          # Loop through each repository to process backups
-          for repository in repositories:
+      if validate_backup_enabled(client_config):
+        # Get repositories listed in backup policy section
+        repositories = get_repositories(client_config)
+        # Loop through each repository to process backups
+        for repository in repositories:
+          if validate_backup_repo_exists(client_config, repository):
             # Get Backup policy for each repository
             backup_policy = get_backup_policy(client_config, repository)
             # Loop through each backup job found in policy
