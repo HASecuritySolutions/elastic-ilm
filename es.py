@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import os
-from config import load_settings
+from config import load_settings, retry
 settings = load_settings()
 if os.getenv('ILM_PLATFORM') == 'opensearch':
   from opensearchpy import OpenSearch as Elasticsearch
@@ -12,6 +12,7 @@ else:
   from elasticsearch import helpers
   from elasticsearch_dsl import Search
   from elasticsearch.connection import create_ssl_context
+
 from error import send_jira_event, send_ms_teams_message, send_notification
 import ssl
 from itertools import islice
@@ -21,6 +22,7 @@ import re
 import json
 from config import load_settings
 from datetime import datetime
+
 from sys import stdout
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -148,10 +150,22 @@ def get_index_alias_members(client, alias):
     es.close()
     return indices
 
+@retry(Exception, tries=6, delay=10)
 def get_all_index_aliases(client):
-    es = build_es_connection(client)
-    members = es.cat.aliases(format="json")
+    try:
+        es = build_es_connection(client)
+        members = es.cat.aliases(format="json")
+    except Exception as e:
+        raise e
     return members
+
+def get_write_alias_names(client_config):
+    aliases = get_all_index_aliases(client_config)
+    alias_return = []
+    for alias in aliases:
+        if alias['is_write_index'] == 'true':
+            alias_return.append(alias['alias'])
+    return alias_return
 
 def get_cluster_stats(client):
     es = build_es_connection(client)
@@ -237,20 +251,27 @@ def get_lowest_data_node_thread_count(client_config):
     es.close()
     return safe_thread_use
 
+@retry(Exception, tries=6, delay=10)
 def get_newest_document_date_in_index(client_config, index, elastic_connection):
     body = '{"sort" : [{ "@timestamp" : {"order" : "desc", "mode": "max"}}], "size": 1}'
     try:
         result = elastic_connection.search(index=index, body=body)
         newest_record = get_es_field_from_first_result(result, '@timestamp')
         newest_record = datetime.strptime(newest_record, '%Y-%m-%dT%H:%M:%S.%fZ')
+        if isinstance(newest_record,datetime):
+            return newest_record
+        else:
+            raise "Index " + str(index) + " time record is not a datetime field with value " + str(newest_record)
     except:
         e = sys.exc_info()[1]
         # If this point is reached, index does not have an @timestamp field
         # Fallback to index creation_date
         index = get_index_information_using_connection(client_config, index, elastic_connection)
         index_date = datetime.strptime(index['creation.date.string'], '%Y-%m-%dT%H:%M:%S.%fZ')
-        return index_date
-    return newest_record
+        if isinstance(index_date,datetime):
+            return index_date
+        else:
+            raise e
 
 def check_special_index(index):
     special = False
@@ -552,6 +573,7 @@ def check_acknowledged_true(status):
 
 # Connection built similar to https://elasticsearch-py.readthedocs.io/en/7.10.0/api.html#elasticsearch
 # Had trouble with check_hostname set to True for some reason
+@retry(Exception, tries=6, delay=10)
 def build_es_connection(client_config):
     settings = load_settings()
     es_config = {}
@@ -649,15 +671,17 @@ def build_es_connection(client_config):
     except:
         e = sys.exc_info()
         print("Connection attempt to Elasticsearch Failed")
-        print(e)
-        return False
+        raise e
 
 def check_cluster_health(client_config):
     try:
         es = build_es_connection(client_config)
-        return es.cluster.health()
+        health = es.cluster.health(request_timeout=30)
+        es.close()
+        return health
     except:
         e = sys.exc_info()
+        es.close()
         print("Connection attempt to Elasticsearch Failed")
         print(e)
         print("Failed to get cluster health")
