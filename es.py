@@ -524,6 +524,7 @@ def delete_index(client_config, index):
         send_notification(client_config, "retention", "Failed", "Deletion job failed for indices " + str(indices), teams=settings['retention']['ms-teams'], jira=settings['retention']['jira'])
         print(e)
 
+@retry(Exception, tries=6, delay=10)
 def forcemerge_index(client_config, index):
     try:
         es = build_es_connection(client_config)
@@ -536,8 +537,7 @@ def forcemerge_index(client_config, index):
             status['acknowledged'] = "true"
             return True
         else:
-            print(e)
-            return False
+            raise Exception(e)
 
 # Not currently working
 def put_index_template(client_config, name, template):
@@ -673,6 +673,7 @@ def build_es_connection(client_config):
         print("Connection attempt to Elasticsearch Failed")
         raise e
 
+@retry(Exception, tries=6, delay=10)
 def check_cluster_health(client_config):
     try:
         es = build_es_connection(client_config)
@@ -682,12 +683,7 @@ def check_cluster_health(client_config):
     except:
         e = sys.exc_info()
         es.close()
-        print("Connection attempt to Elasticsearch Failed")
-        print(e)
-        print("Failed to get cluster health")
-        health = {}
-        health['status'] = "Failed to connect to ES"
-        return health
+        raise Exception(e)
 
 def check_cluster_health_status(client_config, color):
     health = check_cluster_health(client_config)
