@@ -17,7 +17,7 @@ settings = load_settings()
 # Used when .kibana or special in backup policy
 special_indices_to_backup = [".kibana",".opendistro",".opensearch"]
 
-@retry(Exception, tries=6, delay=10)
+@retry(Exception, tries=3, delay=10)
 def validate_backup_repo_exists(client_config, repository):
   """[summary]
   Validates backup repository exists in ES/OS
@@ -86,7 +86,7 @@ def validate_backup_enabled(client_config):
       return False
   return False
 
-@retry(Exception, tries=6, delay=10)
+@retry(Exception, tries=3, delay=10)
 def get_snapshots_in_repository(client_config, repository):
   """[summary]
   Gets all snapshots from backup repository
@@ -113,7 +113,7 @@ def get_snapshots_in_repository(client_config, repository):
   elastic_connection.close()
   return snapshots
 
-@retry(Exception, tries=60, delay=10)
+@retry(Exception, tries=3, delay=10)
 def delete_snapshot_in_repository(client_config, repository, snapshot):
   """[summary]
   Deletes a snapshot from a backup repository
@@ -193,7 +193,7 @@ def apply_backup_retention_policies(client_config, job, retention, repository):
           print(message)
           send_notification(client_config, "backup", "Failed", message, teams=settings['backup']['ms-teams'], jira=settings['backup']['jira'])  
 
-@retry(Exception, tries=60, delay=10)
+@retry(Exception, tries=3, delay=10)
 def take_snapshot(client_config, repository, snapshot, body):
   """[summary]
   Creates a backup snapshot
@@ -238,7 +238,7 @@ def take_snapshot(client_config, repository, snapshot, body):
     print("Operation failed - Create snapshot " + snapshot + " for repo " + repository)
     raise Exception(e)
 
-@retry(Exception, tries=12, delay=10)
+@retry(Exception, tries=3, delay=10)
 def get_indices_within_limit_age(client_config, indices, limit_age):
   """[summary]
   Takes a list of indices and looks to see if the most recent document
