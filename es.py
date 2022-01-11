@@ -666,6 +666,8 @@ def build_es_connection(client_config):
             es_host = client_config['es_host']
         else:
             es_host = client_config['client_name'] + "_client"
+
+        es_config['retry_on_timeout'] = True
         return Elasticsearch(
             [{'host': es_host, 'port': es_port}], **es_config) 
     except:
