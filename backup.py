@@ -161,10 +161,13 @@ def build_snapshot_info(snapshot):
   snap_info['short_name'] = snapshot['snapshot'][:-17]
   if DEBUG_ENABLED == "1":
     print(snap_info['short_name'])
-  snapshot_age = datetime.strptime(snapshot['snapshot'][len(snap_info['short_name'])+1:], '%Y-%m-%d_%H:%M')
-  current_date = datetime.utcnow()
-  snap_info['days_ago'] = (current_date - snapshot_age).days
-  return snap_info
+  try:
+    snapshot_age = datetime.strptime(snapshot['snapshot'][len(snap_info['short_name'])+1:], '%Y-%m-%d_%H:%M')
+    current_date = datetime.utcnow()
+    snap_info['days_ago'] = (current_date - snapshot_age).days
+    return snap_info
+  except:
+    return None
 
 def apply_backup_retention_policies(client_config, job, retention, repository):
   """[summary]
