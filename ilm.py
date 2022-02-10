@@ -47,10 +47,12 @@ if __name__ == "__main__":
     apply_rollover_policies(manual_client)
     run_accounting(manual_client)
 
-    if settings['accounting']['enabled']:
-        schedule.every(settings['accounting']['minutes_between_run']).minutes.do(run_threaded, run_accounting, "")
-    if settings['backup']['enabled']:
-        schedule.every(settings['backup']['minutes_between_run']).minutes.do(run_threaded, run_backup, "")
+    if "accounting" in settings:
+        if settings['accounting']['enabled']:
+            schedule.every(settings['accounting']['minutes_between_run']).minutes.do(run_threaded, run_accounting, "")
+    if 'backup' in settings:
+        if settings['backup']['enabled']:
+            schedule.every(settings['backup']['minutes_between_run']).minutes.do(run_threaded, run_backup, "")
     #if settings['custom_checks']['enabled']:
     #    schedule.every(settings['custom_checks']['minutes_between_run']).minutes.do(run_threaded, run_custom_checks, "")
     # Example client info entry
@@ -61,10 +63,12 @@ if __name__ == "__main__":
     #     "schedule": "15"
     #     }
     # },
-    if settings['retention']['enabled']:
-        schedule.every(settings['retention']['minutes_between_run']).minutes.do(run_threaded, apply_retention_policies, settings['retention']['health_check_level'], manual_client)
-    if settings['rollover']['enabled']:
-        schedule.every(settings['rollover']['minutes_between_run']).minutes.do(run_threaded, apply_rollover_policies, manual_client)
+    if 'retention' in settings:
+        if settings['retention']['enabled']:
+            schedule.every(settings['retention']['minutes_between_run']).minutes.do(run_threaded, apply_retention_policies, settings['retention']['health_check_level'], manual_client)
+    if 'rollover' in settings:
+        if settings['rollover']['enabled']:
+            schedule.every(settings['rollover']['minutes_between_run']).minutes.do(run_threaded, apply_rollover_policies, manual_client)
 
     while True:
         schedule.run_pending()
