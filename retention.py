@@ -88,7 +88,7 @@ def apply_retention_policies(health_check_level, manual_client):
                             retry_count = retry_count - 1
                             print("Retry attempts left for retention operation set to " + str(retry_count) + " sleeping for " + str(sleep_time) + " seconds")
                             time.sleep(sleep_time)
-
+settings = load_settings()
 if __name__ == "__main__":
     import argparse
     from argparse import RawTextHelpFormatter
@@ -102,4 +102,4 @@ if __name__ == "__main__":
         notification = True
     else:
         notification = False
-    apply_retention_policies("yellow", manual_client)
+    apply_retention_policies(settings['retention']['health_check_level'], manual_client)
