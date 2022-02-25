@@ -311,6 +311,8 @@ def check_special_index(index):
         special = True
     if str(index).startswith(".transform-internal"):
         special = True
+    if str(index).startswith(".") and not str(index).startswith(".monitoring"):
+        special = True
     return special
     
 
