@@ -305,6 +305,12 @@ def check_special_index(index):
         special = True
     if str(index).startswith("elastalert"):
         special = True
+    if str(index).startswith(".siem-signals"):
+        special = True
+    if str(index).startswith(".transform"):
+        special = True
+    if str(index).startswith(".transform-internal"):
+        special = True
     return special
     
 
