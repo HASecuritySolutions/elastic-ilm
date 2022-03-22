@@ -260,6 +260,7 @@ def run_accounting(manual_client):
     settings = load_settings()
     if settings['accounting']['enabled']:
         retry_count = settings['accounting']['retry_attempts']
+        initial_retry_count = retry_count
         retry_list = []
         sleep_time = settings['accounting']['retry_wait_in_seconds']
         # Load all client configurations
@@ -274,8 +275,9 @@ def run_accounting(manual_client):
         while retry_count >= 0 and len(retry_list) > 0:
             print("Accounting job processing for:")
             print(retry_list)
-            print("Retry count set to " + str(retry_count))
-            print("------------------------------\n")
+            if initial_retry_count != retry_count:
+                print("Retry count set to " + str(retry_count))
+                print("------------------------------\n")
             for client in clients:
                 # Set nice variable names
                 client_name = clients[client]['client_name']
