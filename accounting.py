@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from config import load_configs, load_settings
 from error import send_notification
+import os
 import es
 import json
 import time
@@ -166,20 +167,26 @@ def calculate_accounting(client_config, client_name):
                         'device_count': int(total_devices),
                         '@timestamp': str(current_date.isoformat()),
                     }
-                with open(settings['accounting']['output_folder'] + '/' + client_name + "_accounting-device-" + date_time + ".json", 'a') as f:
-                    json_content = json.dumps(accounting_record)
-                    f.write(json_content)
-                    f.write('\n')
+                if os.path.isdir(settings['accounting']['output_folder']):
+                    with open(settings['accounting']['output_folder'] + '/' + client_name + "_accounting-device-" + date_time + ".json", 'a') as f:
+                        json_content = json.dumps(accounting_record)
+                        f.write(json_content)
+                        f.write('\n')
+                else:
+                    print(f"{settings['accounting']['output_folder']} does not exist. Unable to write accounting records to disk")
             # Appends newest record date into accounting_record
             #for accounting_record in accounting_records:
                 #accounting_record['newest_document_date'] = str(es.get_newest_document_date_in_index(client_config, index['index'], elastic_connection).isoformat())
             if not settings['settings']['debug'] and len(accounting_records) != 0:
                 for accounting_record in accounting_records:
                     # Create a backup copy of each accounting record
-                    with open(settings['accounting']['output_folder'] + '/' + client_name + "_accounting-" + date_time + ".json", 'a') as f:
-                        json_content = json.dumps(accounting_record)
-                        f.write(json_content)
-                        f.write('\n')
+                    if os.path.isdir(settings['accounting']['output_folder']):
+                        with open(settings['accounting']['output_folder'] + '/' + client_name + "_accounting-" + date_time + ".json", 'a') as f:
+                            json_content = json.dumps(accounting_record)
+                            f.write(json_content)
+                            f.write('\n')
+                    else:
+                        print(f"{settings['accounting']['output_folder']} does not exist. Unable to write accounting records to disk")
             else:
                 print("Debug enabled or no data to save. Not creating accounting file")
 
@@ -191,49 +198,59 @@ def calculate_accounting(client_config, client_name):
             print("Total cluster size is: " + str(cluster_size) + " GB")
             if 'device_tracking_inclusion' in settings['accounting']:
                 print(f"Total device tracking is {total_devices}")
+
+            if cluster_size > 1:
+                if os.path.isdir(settings['accounting']['output_folder']) and len(accounting_records) != 0:
+                    with open(settings['accounting']['output_folder'] + '/' + client_name + "_accounting-" + date_time + ".json") as f:
+                        accounting_file = f.readlines()
+                    total_accounting_size = 0
+                    for record in accounting_file:
+                        json_object = json.loads(record)
+                        total_accounting_size += float(json_object['size'])
+                    total_accounting_size = round(total_accounting_size, 8)
+                    print("Total accounting record size is: " + str(total_accounting_size) + " GB")
+
+                    special_index_size = round(special_index_size, 2)
+                    print("Total special index size is : " + str(special_index_size) + " GB")
+
+                    total_accounting_index_size = special_index_size + total_accounting_size
+                    print("Accounting and special index size equals : " + str(total_accounting_index_size) + " GB")
+
+                    difference_size = cluster_size - total_accounting_index_size
+                    print("Difference is " + str(difference_size) + " GB")
+                    if difference_size >= 20:
+                        message = "Accounting verification is off by more than 20.0 GB. Please find out why. This test is performed by comparing the current cluster size against the records in the accounting JSON output files.\n\nTotal cluster size is : " + str(cluster_size) + " GB\n\nTotal accounting record size is: " + str(total_accounting_size) + " GB\n\nTotal special index size is : " + str(special_index_size) + " GB\n\nAccounting and special index size equals : " + str(total_accounting_index_size) + " GB\n\nDifference is " + str(difference_size) + " GB\n\nThe size difference can be due to the script taking longer to run and the index sizes growing during the accounting calculation. However, if the difference is significant, some other problem likely occurred."
+                        send_notification(client_config, "accounting verification", "Failed", message, jira=settings['accounting']['ms-teams'], teams=settings['accounting']['jira'])
+                else:
+                    if os.path.isdir(settings['accounting']['output_folder']):
+                        print(f"{settings['accounting']['output_folder']} does not exist. Unable to write accounting records to disk")
+                    if len(accounting_records) != 0:
+                        print("No accounting records to write to disk. Empty cluster")
                 
-            with open(settings['accounting']['output_folder'] + '/' + client_name + "_accounting-" + date_time + ".json") as f:
-                accounting_file = f.readlines()
-            total_accounting_size = 0
-            for record in accounting_file:
-                json_object = json.loads(record)
-                total_accounting_size += float(json_object['size'])
-            total_accounting_size = round(total_accounting_size, 8)
-            print("Total accounting record size is: " + str(total_accounting_size) + " GB")
 
-            special_index_size = round(special_index_size, 2)
-            print("Total special index size is : " + str(special_index_size) + " GB")
-
-            total_accounting_index_size = special_index_size + total_accounting_size
-            print("Accounting and special index size equals : " + str(total_accounting_index_size) + " GB")
-
-            difference_size = cluster_size - total_accounting_index_size
-            print("Difference is " + str(difference_size) + " GB")
-            if difference_size >= 20:
-                message = "Accounting verification is off by more than 20.0 GB. Please find out why. This test is performed by comparing the current cluster size against the records in the accounting JSON output files.\n\nTotal cluster size is : " + str(cluster_size) + " GB\n\nTotal accounting record size is: " + str(total_accounting_size) + " GB\n\nTotal special index size is : " + str(special_index_size) + " GB\n\nAccounting and special index size equals : " + str(total_accounting_index_size) + " GB\n\nDifference is " + str(difference_size) + " GB\n\nThe size difference can be due to the script taking longer to run and the index sizes growing during the accounting calculation. However, if the difference is significant, some other problem likely occurred."
-                send_notification(client_config, "accounting verification", "Failed", message, jira=settings['accounting']['ms-teams'], teams=settings['accounting']['jira'])
-
-            if len(accounting_records) != 0 and not settings['settings']['debug'] and settings['accounting']['output_to_es']:
-                print("Sending accounting records to ES")
-                elasticsearch_connection = es.build_es_connection(client_config)
-                results = es.get_list_by_chunk_size(accounting_records, 100)
-                for result in results:
-                    es.bulk_insert_data_to_es(elasticsearch_connection, result, "accounting", bulk_size=100)
-                elasticsearch_connection.close()
-                clients = load_configs()
-                if client_name != settings['accounting']['send_copy_to_client_name'] and settings['accounting']['send_copy_to_client_name'] != '':
-                    elasticsearch_connection = es.build_es_connection(clients[settings['accounting']['send_copy_to_client_name']])
+                if len(accounting_records) != 0 and not settings['settings']['debug'] and settings['accounting']['output_to_es']:
+                    print("Sending accounting records to ES")
+                    elasticsearch_connection = es.build_es_connection(client_config)
                     results = es.get_list_by_chunk_size(accounting_records, 100)
                     for result in results:
                         es.bulk_insert_data_to_es(elasticsearch_connection, result, "accounting", bulk_size=100)
                     elasticsearch_connection.close()
-                return True
-            else:
-                if not settings['settings']['debug']:
-                    print("No index data found for accounting")
+                    clients = load_configs()
+                    if client_name != settings['accounting']['send_copy_to_client_name'] and settings['accounting']['send_copy_to_client_name'] != '':
+                        elasticsearch_connection = es.build_es_connection(clients[settings['accounting']['send_copy_to_client_name']])
+                        results = es.get_list_by_chunk_size(accounting_records, 100)
+                        for result in results:
+                            es.bulk_insert_data_to_es(elasticsearch_connection, result, "accounting", bulk_size=100)
+                        elasticsearch_connection.close()
                     return True
                 else:
-                    return True
+                    if not settings['settings']['debug']:
+                        print("No index data found for accounting")
+                        return True
+                    else:
+                        return True
+            else:
+                return True
         else:
             settings = load_settings()
             print("Accounting operation failed for " + client_name + ". Cluster health does not meet level:  " + settings['accounting']['health_check_level'])

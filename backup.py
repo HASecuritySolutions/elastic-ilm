@@ -2,6 +2,7 @@
 from config import load_configs, load_settings, retry
 from error import send_notification
 import os
+import re
 # Test set environment as opensearch
 os.environ["ILM_PLATFORM"] = "opensearch"
 import es
@@ -135,10 +136,10 @@ def delete_snapshot_in_repository(client_config, repository, snapshot):
     elastic_connection.close()
     if 'acknowledged' in delete_status:
       if delete_status['acknowledged'] == True:
-        print("Snapshot " + snapshot['snapshot'] + " deleted successfully")
+        print("Snapshot " + snapshot + " deleted successfully")
         return True
       else:
-        print("Snapshot " + snapshot['snapshot'] + " failed to delete successfully")
+        print("Snapshot " + snapshot + " failed to delete successfully")
         return False
   except Exception as e:
     elastic_connection.close()
@@ -158,16 +159,25 @@ def build_snapshot_info(snapshot):
   """
   snap_info = {}
   snap_info['name'] = snapshot['snapshot']
-  snap_info['short_name'] = snapshot['snapshot'][:-17]
+  if re.match('special_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}:[0-9]{2}:[0-9]{2}', snapshot['snapshot']):
+    snap_info['short_name'] = snapshot['snapshot'][:-20]
+  else:
+    snap_info['short_name'] = snapshot['snapshot']
   if DEBUG_ENABLED == "1":
     print(snap_info['short_name'])
   try:
-    snapshot_age = datetime.strptime(snapshot['snapshot'][len(snap_info['short_name'])+1:], '%Y-%m-%d_%H:%M')
+    snapshot_age = datetime.strptime(snapshot['snapshot'][len(snap_info['short_name'])+1:], '%Y-%m-%d_%H:%M:S')
     current_date = datetime.utcnow()
     snap_info['days_ago'] = (current_date - snapshot_age).days
     return snap_info
   except:
-    return None
+    try:
+      snapshot_age = datetime.strptime(snapshot['snapshot'][len(snap_info['short_name'])+1:], '%Y-%m-%d_%H:%M')
+      current_date = datetime.utcnow()
+      snap_info['days_ago'] = (current_date - snapshot_age).days
+      return snap_info
+    except:
+      return snap_info
 
 def apply_backup_retention_policies(client_config, job, retention, repository):
   """[summary]
@@ -187,14 +197,15 @@ def apply_backup_retention_policies(client_config, job, retention, repository):
         print("Snapshot " + snapshot_info['name'] + " is " + str(snapshot_info['days_ago']) + " days old compared to policy of " + str(retention))
       # Check if days_ago is greater than or equal to policy date
       # If greater than or equal to policy date, delete snapshot
-      if snapshot_info['days_ago'] >= retention:
-        print("Attempting to delete snapshot " + snapshot_info['name'])
-        # Delete old snapshot
-        if not delete_snapshot_in_repository(client_config, repository, snapshot_info['name']):
-          # Should not hit this point unless retry failed for an hour
-          message = "Backup snapshot removal failed for " + client_config['client_name'] + " for " + job + " in repository " + repository
-          print(message)
-          send_notification(client_config, "backup", "Failed", message, teams=settings['backup']['ms-teams'], jira=settings['backup']['jira'])  
+      if 'days_ago' in snapshot_info:
+        if snapshot_info['days_ago'] >= retention:
+          print("Attempting to delete snapshot " + snapshot_info['name'])
+          # Delete old snapshot
+          if not delete_snapshot_in_repository(client_config, repository, snapshot_info['name']):
+            # Should not hit this point unless retry failed for an hour
+            message = "Backup snapshot removal failed for " + client_config['client_name'] + " for " + job + " in repository " + repository
+            print(message)
+            send_notification(client_config, "backup", "Failed", message, teams=settings['backup']['ms-teams'], jira=settings['backup']['jira'])  
 
 @retry(Exception, tries=3, delay=10)
 def take_snapshot(client_config, repository, snapshot, body):
@@ -220,7 +231,7 @@ def take_snapshot(client_config, repository, snapshot, body):
     raise Exception(e)
 
   try:
-    current_date = datetime.strftime(datetime.utcnow(), '%Y-%m-%d_%H:%M')
+    current_date = datetime.strftime(datetime.utcnow(), '%Y-%m-%d_%H:%M:%S')
     snapshot_name = f"{snapshot}_{current_date}"
     if DEBUG_ENABLED == "1":
       print(f"Triggering backup for {snapshot_name}*")
