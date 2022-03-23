@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
-import schedule
-import sd_notify
-import threading
+from apscheduler.schedulers.background import BackgroundScheduler
 from config import load_settings
 from accounting import run_accounting
 #from custom_checks import run_custom_checks
 from retention import apply_retention_policies
 from rollover import apply_rollover_policies
 from backup import run_backup
-import time
 import argparse
 from argparse import RawTextHelpFormatter
 parser = argparse.ArgumentParser(description='Used to manually run script (Example: ilm.py --manual 1)', formatter_class=RawTextHelpFormatter)
@@ -26,51 +23,56 @@ else:
     notification = False
 
 if manual == 0:
-    notify = sd_notify.Notifier()
-    if not notify.enabled():
-        # Then it's probably not running is systemd with watchdog enabled
-        raise Exception("Watchdog not enabled")
-    notify.status("Initializing service...")
+    sched = BackgroundScheduler(daemon=True)
+else:
+    sched = BackgroundScheduler(daemon=False)
 
-def run_threaded(job_func, *arguments):
-    job_thread = threading.Thread(target=job_func, args=tuple(arguments))
-    job_thread.start()
 
 if __name__ == "__main__":
     settings = load_settings()
-    if manual == 0:
-        notify.ready()
     
-    # On service startup, immediately run retention, rollover, backup, and accounting
-    run_backup(manual_client)
-    apply_retention_policies(settings['retention']['health_check_level'], manual_client)
-    apply_rollover_policies(manual_client)
-    run_accounting(manual_client)
-
     if "accounting" in settings:
         if settings['accounting']['enabled']:
-            schedule.every(settings['accounting']['minutes_between_run']).minutes.do(run_threaded, run_accounting, "")
+            sched.add_job(run_accounting,'interval',minutes=settings['accounting']['minutes_between_run'])
+    
     if 'backup' in settings:
         if settings['backup']['enabled']:
-            schedule.every(settings['backup']['minutes_between_run']).minutes.do(run_threaded, run_backup, "")
-    #if settings['custom_checks']['enabled']:
-    #    schedule.every(settings['custom_checks']['minutes_between_run']).minutes.do(run_threaded, run_custom_checks, "")
-    # Example client info entry
-    # "custom_checks": {
-    #     "0": {
-    #     "check": "/bin/bash /opt/elastic_stack/scripts/verify_acuity_custom_service.sh",
-    #     "remediate": "/bin/bash /opt/elastic_stack/scripts/restart_acuity_custom_service.sh",
-    #     "schedule": "15"
-    #     }
-    # },
+            sched.add_job(run_backup,'interval',minutes=settings['backup']['minutes_between_run'])
+        
     if 'retention' in settings:
         if settings['retention']['enabled']:
-            schedule.every(settings['retention']['minutes_between_run']).minutes.do(run_threaded, apply_retention_policies, settings['retention']['health_check_level'], manual_client)
+            sched.add_job(apply_retention_policies, 'interval', minutes=settings['retention']['minutes_between_run'], args=[settings['retention']['health_check_level'],manual_client])
+
     if 'rollover' in settings:
         if settings['rollover']['enabled']:
-            schedule.every(settings['rollover']['minutes_between_run']).minutes.do(run_threaded, apply_rollover_policies, manual_client)
+            sched.add_job(apply_rollover_policies, 'interval', minutes=settings['rollover']['minutes_between_run'], args=[manual_client])
 
-    while True:
-        schedule.run_pending()
-        # Sleep 1 minute between jobs
-        time.sleep(60)
+    sched.start()
+
+    # # On service startup, immediately run retention, rollover, backup, and accounting
+    # run_backup(manual_client)
+    # apply_retention_policies(settings['retention']['health_check_level'], manual_client)
+    # apply_rollover_policies(manual_client)
+    # run_accounting(manual_client)
+
+    
+    # if 'backup' in settings:
+    #     if settings['backup']['enabled']:
+    #         schedule.every(settings['backup']['minutes_between_run']).minutes.do(run_threaded, run_backup, "")
+    # #if settings['custom_checks']['enabled']:
+    # #    schedule.every(settings['custom_checks']['minutes_between_run']).minutes.do(run_threaded, run_custom_checks, "")
+    # # Example client info entry
+    # # "custom_checks": {
+    # #     "0": {
+    # #     "check": "/bin/bash /opt/elastic_stack/scripts/verify_acuity_custom_service.sh",
+    # #     "remediate": "/bin/bash /opt/elastic_stack/scripts/restart_acuity_custom_service.sh",
+    # #     "schedule": "15"
+    # #     }
+    # # },
+    # if 'retention' in settings:
+    #     if settings['retention']['enabled']:
+    #         schedule.every(settings['retention']['minutes_between_run']).minutes.do(run_threaded, apply_retention_policies, settings['retention']['health_check_level'], manual_client)
+    # if 'rollover' in settings:
+    #     if settings['rollover']['enabled']:
+    #         schedule.every(settings['rollover']['minutes_between_run']).minutes.do(run_threaded, apply_rollover_policies, manual_client)
+
