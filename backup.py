@@ -363,7 +363,7 @@ def take_snapshot_per_policies(client_config, job, backup_policy, repository, in
       print(message)
       send_notification(client_config, "backup", "Failed", message, teams=settings['backup']['ms-teams'], jira=settings['backup']['jira'])
 
-def run_backup(manual_client):
+def run_backup(manual_client=""):
   """[summary]
   Runs backup job for specific client configuration
 

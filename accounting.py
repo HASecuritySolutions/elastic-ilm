@@ -256,7 +256,7 @@ def calculate_accounting(client_config, client_name):
             print("Accounting operation failed for " + client_name + ". Cluster health does not meet level:  " + settings['accounting']['health_check_level'])
             return False
 
-def run_accounting(manual_client):
+def run_accounting(manual_client=""):
     settings = load_settings()
     if settings['accounting']['enabled']:
         retry_count = settings['accounting']['retry_attempts']

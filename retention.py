@@ -49,7 +49,7 @@ def apply_retention_to_old_indices(indices, index_retention_policies, client_con
     elastic_connection.close()
     return old_indices
 
-def apply_retention_policies(health_check_level, manual_client):
+def apply_retention_policies(health_check_level, manual_client=""):
     settings = load_settings()
     retry_count = 60
     sleep_time = 60
@@ -88,7 +88,7 @@ def apply_retention_policies(health_check_level, manual_client):
                             retry_count = retry_count - 1
                             print("Retry attempts left for retention operation set to " + str(retry_count) + " sleeping for " + str(sleep_time) + " seconds")
                             time.sleep(sleep_time)
-settings = load_settings()
+                    
 if __name__ == "__main__":
     import argparse
     from argparse import RawTextHelpFormatter

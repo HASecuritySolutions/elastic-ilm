@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+import hashlib
+import argparse
+import time
+from argparse import RawTextHelpFormatter
 from apscheduler.schedulers.background import BackgroundScheduler
 from config import load_settings
 from accounting import run_accounting
@@ -6,8 +10,6 @@ from accounting import run_accounting
 from retention import apply_retention_policies
 from rollover import apply_rollover_policies
 from backup import run_backup
-import argparse
-from argparse import RawTextHelpFormatter
 parser = argparse.ArgumentParser(description='Used to manually run script (Example: ilm.py --manual 1)', formatter_class=RawTextHelpFormatter)
 parser.add_argument("--manual", default=0, type=int, help="Set to 1 to manually run script")
 parser.add_argument("--client", default="", type=str, help="Set to a specific client name to limit calls to one client")
@@ -27,52 +29,43 @@ if manual == 0:
 else:
     sched = BackgroundScheduler(daemon=False)
 
-
-if __name__ == "__main__":
+def start_jobs():
     settings = load_settings()
     
     if "accounting" in settings:
         if settings['accounting']['enabled']:
-            sched.add_job(run_accounting,'interval',minutes=settings['accounting']['minutes_between_run'])
+            sched.add_job(run_accounting, 'interval', minutes=settings['accounting']['minutes_between_run'], args=[manual_client])
     
     if 'backup' in settings:
         if settings['backup']['enabled']:
-            sched.add_job(run_backup,'interval',minutes=settings['backup']['minutes_between_run'])
+            sched.add_job(run_backup, 'interval', minutes=settings['backup']['minutes_between_run'])
         
     if 'retention' in settings:
         if settings['retention']['enabled']:
-            sched.add_job(apply_retention_policies, 'interval', minutes=settings['retention']['minutes_between_run'], args=[settings['retention']['health_check_level'],manual_client])
+            sched.add_job(apply_retention_policies, 'interval', minutes=settings['retention']['minutes_between_run'], args=[settings['retention']['health_check_level']])
 
     if 'rollover' in settings:
         if settings['rollover']['enabled']:
-            sched.add_job(apply_rollover_policies, 'interval', minutes=settings['rollover']['minutes_between_run'], args=[manual_client])
+            sched.add_job(apply_rollover_policies, 'interval', minutes=settings['rollover']['minutes_between_run'])
 
     sched.start()
 
-    # # On service startup, immediately run retention, rollover, backup, and accounting
-    # run_backup(manual_client)
-    # apply_retention_policies(settings['retention']['health_check_level'], manual_client)
-    # apply_rollover_policies(manual_client)
-    # run_accounting(manual_client)
-
+if __name__ == "__main__":
+    settings_as_bytes = load_settings(format='bytes')
+    config_hash = hashlib.sha256(settings_as_bytes).hexdigest()
     
-    # if 'backup' in settings:
-    #     if settings['backup']['enabled']:
-    #         schedule.every(settings['backup']['minutes_between_run']).minutes.do(run_threaded, run_backup, "")
-    # #if settings['custom_checks']['enabled']:
-    # #    schedule.every(settings['custom_checks']['minutes_between_run']).minutes.do(run_threaded, run_custom_checks, "")
-    # # Example client info entry
-    # # "custom_checks": {
-    # #     "0": {
-    # #     "check": "/bin/bash /opt/elastic_stack/scripts/verify_acuity_custom_service.sh",
-    # #     "remediate": "/bin/bash /opt/elastic_stack/scripts/restart_acuity_custom_service.sh",
-    # #     "schedule": "15"
-    # #     }
-    # # },
-    # if 'retention' in settings:
-    #     if settings['retention']['enabled']:
-    #         schedule.every(settings['retention']['minutes_between_run']).minutes.do(run_threaded, apply_retention_policies, settings['retention']['health_check_level'], manual_client)
-    # if 'rollover' in settings:
-    #     if settings['rollover']['enabled']:
-    #         schedule.every(settings['rollover']['minutes_between_run']).minutes.do(run_threaded, apply_rollover_policies, manual_client)
+    start_jobs()
 
+    while True:
+        time.sleep(5)
+        settings_as_bytes = load_settings(format='bytes')
+        current_hash = hashlib.sha256(settings_as_bytes).hexdigest()
+        if current_hash != config_hash:
+            print("Configuration changed. Reloading jobs")
+            config_hash = current_hash
+            sched.shutdown()
+            if manual == 0:
+                sched = BackgroundScheduler(daemon=True)
+            else:
+                sched = BackgroundScheduler(daemon=False)
+            start_jobs()

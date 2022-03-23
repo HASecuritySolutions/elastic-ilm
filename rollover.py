@@ -93,7 +93,7 @@ def rollover_client_indicies(client_config):
             print("Retry attempts left for rollover operation set to " + str(retry_count) + " sleeping for " + str(sleep_time) + " seconds")
             time.sleep(sleep_time)
 
-def apply_rollover_policies(manual_client):
+def apply_rollover_policies(manual_client=""):
     settings = load_settings()
     if settings['rollover']['enabled']:
         # Load all client configurations from /opt/maintenance/*.json

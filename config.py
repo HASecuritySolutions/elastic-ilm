@@ -7,7 +7,13 @@ from functools import wraps
 import time
 
 base_dir = os.path.abspath(os.path.dirname(__file__))
-settings_file = base_dir + "/settings.toml"
+if os.path.exists("/etc/elastic-ilm/settings.toml"):
+    settings_file = "/etc/elastic-ilm/settings.toml"
+else:
+    settings_file = base_dir + "/settings.toml"
+if not os.path.exists(settings_file):
+    print("settings.toml not found - exiting")
+    exit()
 
 def retry(ExceptionToCheck, tries=5, delay=1, backoff=1, logger=None):
     """Retry calling the decorated function using an exponential backoff.
@@ -51,16 +57,16 @@ def retry(ExceptionToCheck, tries=5, delay=1, backoff=1, logger=None):
 
     return deco_retry
 
-def load_settings():
-    if os.path.exists(settings_file):
+def load_settings(format='toml'):
+    if format == 'toml':
         settings = toml.load(settings_file)
         if settings['settings']['client_json_folder'] == "":
             settings['settings']['client_json_folder'] = base_dir
-    else:
-        print("No settings.toml file found. Please clone and then edit settings.toml.example")
-        print("Then retry.")
-        exit()
-    return settings
+        return settings
+    if format == 'bytes':
+        with open(settings_file, "rb") as file:
+            read_bytes = file.read()  # read entire file as bytes
+        return read_bytes
 
 def load_configs(client_value=""):
     settings = load_settings()
