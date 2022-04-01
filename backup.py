@@ -207,7 +207,6 @@ def apply_backup_retention_policies(client_config, job, retention, repository):
             print(message)
             send_notification(client_config, "backup", "Failed", message, teams=settings['backup']['ms-teams'], jira=settings['backup']['jira'])  
 
-@retry(Exception, tries=3, delay=10)
 def take_snapshot(client_config, repository, snapshot, body):
   """[summary]
   Creates a backup snapshot
