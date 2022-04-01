@@ -682,10 +682,10 @@ def build_es_connection(client_config):
             [{'host': es_host, 'port': es_port}], **es_config) 
     except:
         e = sys.exc_info()
+        print(e)
         print("Connection attempt to Elasticsearch Failed")
         raise e
 
-@retry(Exception, tries=6, delay=10)
 def check_cluster_health(client_config):
     try:
         es = build_es_connection(client_config)
@@ -695,6 +695,51 @@ def check_cluster_health(client_config):
     except:
         e = sys.exc_info()
         es.close()
+        raise Exception(e)
+
+def restore_index(client_config, backup_repository, snapshot_name, index_name):
+    """[summary]
+    Restores indices from a snapshot
+
+    Args:
+        client_config ([dict]): [Client configuration]
+        backup_repository ([str]): [ES/OS repository name]
+        snapshot_name ([str]): [Name of snapshot to restore from]
+        body ([dict]): [Details for backup job]
+        index_name (str): [Name of index to restore]
+
+    Raises:
+        Exception: [If error, print error and retry]
+
+    Returns:
+        [bool]: [Backup restore status]
+    """
+    try:
+        if check_cluster_health_status(client_config, 'yellow'):
+            print("Cluster health check passed")
+    except Exception as e:
+        raise Exception(e)
+    try:
+        elastic_connection = build_es_connection(client_config)
+        body = {
+            "indices": index_name, 
+            "ignore_unavailable": True, 
+            "include_global_state": False, 
+            "include_aliases": False, 
+            "ignore_index_settings": "archived,archived.index.lifecycle,archived,archived.index.lifecycle.indexing_complete,archived.index.lifecycle.name,archived.index.lifecycle.rollover_alias,archived.index.lifecycle.index_complete,archived.index.frozen,index.lifecycle,index.lifecycle.name,index.lifecycle.rollover_alias,index.lifecycle.index_complete,index.lifecycle.indexing_complete,index.frozen,index.routing.allocation.require.box_type"
+        }
+        restore_job = elastic_connection.snapshot.restore(backup_repository, snapshot_name, body, wait_for_completion=False, request_timeout=30)
+        elastic_connection.close()
+        if 'accepted' in restore_job:
+            if restore_job['accepted']:
+                print("Restore of index " + index_name + ": successful")
+                return True
+            else:
+                print("Restore of index " + index_name + ": failed")
+                return False 
+    except Exception as e:
+        elastic_connection.close()
+        print("Operation failed - Restore snapshot " + snapshot_name + " for repo " + backup_repository + " for index name of : " + index_name)
         raise Exception(e)
 
 def check_cluster_health_status(client_config, color):
