@@ -40,7 +40,7 @@ args = parser.parse_args()
 manual = args.manual
 manual_client = args.client
 NOTIFICATION = args.notification
-if args.NOTIFICATION == "True":
+if args.notification == "True":
     NOTIFICATION = True
 else:
     NOTIFICATION = False
