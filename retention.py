@@ -95,53 +95,52 @@ def apply_retention_policies(health_check_level, manual_client=""):
             print("Processing retention for " + client_name)
             # If client set at command line only run it otherwise
             # execute for all clients
-            if manual_client == "" or client_name == manual_client:
-                if limit_to_client == client_name or limit_to_client == "":
-                    while retry_count >= 0 and success == 0:
-                        # Check cluster health - Expect Yellow to continue
-                        if es.check_cluster_health_status(client_config, health_check_level):
-                            # Grab the client's retention policies
-                            index_retention_policies = get_retention_policy(client_config)
-                            # Next, get information on all current indices in cluster
-                            indices = es.es_get_indices(client_config)
-                            # Get the list of indices that are older than the retention policy
-                            apply_retention_to_old_indices(
-                                indices,
-                                index_retention_policies,
-                                client_config
-                            )
-                            success = 1
+            if limit_to_client == client_name or limit_to_client == "":
+                while retry_count >= 0 and success == 0:
+                    # Check cluster health - Expect Yellow to continue
+                    if es.check_cluster_health_status(client_config, health_check_level):
+                        # Grab the client's retention policies
+                        index_retention_policies = get_retention_policy(client_config)
+                        # Next, get information on all current indices in cluster
+                        indices = es.es_get_indices(client_config)
+                        # Get the list of indices that are older than the retention policy
+                        apply_retention_to_old_indices(
+                            indices,
+                            index_retention_policies,
+                            client_config
+                        )
+                        success = 1
+                    else:
+                        if retry_count > 0:
+                            print("Retention operation failed for " + client_name + \
+                                ". Cluster health does not meet level:  " + \
+                                settings['retention']['health_check_level'])
                         else:
-                            if retry_count > 0:
-                                print("Retention operation failed for " + client_name + \
-                                    ". Cluster health does not meet level:  " + \
-                                    settings['retention']['health_check_level'])
-                            else:
-                                message = "Retention operation failed.\n\n" + \
-                                    "It is also possible that connections are " + \
-                                    "unable to be made to the client/nginx node." + \
-                                    "Please fix.\n\nRemember that in order for " + \
-                                    "client's to be properly build you will need " + \
-                                    "to get their cluster status to **Green** " + \
-                                    "or **Yellow** and then re-run the following" + \
-                                    " command:\n\n**python3 " + \
-                                    "/opt/elastic-ilm/retention.py --client " + \
-                                    client_name + "**"
-                                send_notification(
-                                    client_config,
-                                    "retention",
-                                    "Failed",
-                                    message,
-                                    teams=settings['retention']['ms-teams'],
-                                    jira=settings['retention']['jira']
-                                )
-                        if success == 0:
-                            # Decrese retry count by one before trying while statement again
-                            retry_count = retry_count - 1
-                            print("Retry attempts left for retention " + \
-                                "operation set to " + str(retry_count) + \
-                                " sleeping for " + str(sleep_time) + " seconds")
-                            time.sleep(sleep_time)
+                            message = "Retention operation failed.\n\n" + \
+                                "It is also possible that connections are " + \
+                                "unable to be made to the client/nginx node." + \
+                                "Please fix.\n\nRemember that in order for " + \
+                                "client's to be properly build you will need " + \
+                                "to get their cluster status to **Green** " + \
+                                "or **Yellow** and then re-run the following" + \
+                                " command:\n\n**python3 " + \
+                                "/opt/elastic-ilm/retention.py --client " + \
+                                client_name + "**"
+                            send_notification(
+                                client_config,
+                                "retention",
+                                "Failed",
+                                message,
+                                teams=settings['retention']['ms-teams'],
+                                jira=settings['retention']['jira']
+                            )
+                    if success == 0:
+                        # Decrese retry count by one before trying while statement again
+                        retry_count = retry_count - 1
+                        print("Retry attempts left for retention " + \
+                            "operation set to " + str(retry_count) + \
+                            " sleeping for " + str(sleep_time) + " seconds")
+                        time.sleep(sleep_time)
 
 if __name__ == "__main__":
     import argparse

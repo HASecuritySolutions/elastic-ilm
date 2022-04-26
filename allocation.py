@@ -41,7 +41,6 @@ def allocate_indices(client_config, index, index_allocation_policies):
         client_config, index, elastic_connection)
     # make sure newest record is not empty
     if newest_record != "":
-        index = 'logstash-zeek-000001'
         # Get the index specific allocation policy
         policy = es.check_index_allocation_policy(
             index, index_allocation_policies)
@@ -112,16 +111,15 @@ def apply_allocation_policies(client_config=""):
             print("Processing allocation for " + client_name)
             # If client set at command line only run it otherwise
             # execute for all clients
-            if client_config == "" or client_name == client_config:
-                if limit_to_client == client_name or limit_to_client == "":
-                    # Grab the client's allocation policies
-                    index_allocation_policies = get_allocation_policy(
-                        client_config)
-                    # Next, get information on all current indices in cluster
-                    indices = es.es_get_indices(client_config)
-                    # Get the list of indices that are older than the retention policy
-                    apply_allocation_to_indices(
-                        indices, index_allocation_policies, client_config)
+            if limit_to_client == client_name or limit_to_client == "":
+                # Grab the client's allocation policies
+                index_allocation_policies = get_allocation_policy(
+                    client_config)
+                # Next, get information on all current indices in cluster
+                indices = es.es_get_indices(client_config)
+                # Get the list of indices that are older than the retention policy
+                apply_allocation_to_indices(
+                    indices, index_allocation_policies, client_config)
 
 if __name__ == "__main__":
     import argparse
