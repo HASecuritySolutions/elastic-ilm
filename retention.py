@@ -95,7 +95,7 @@ def apply_retention_policies(health_check_level, manual_client=""):
             print("Processing retention for " + client_name)
             # If client set at command line only run it otherwise
             # execute for all clients
-            if limit_to_client == client_name or limit_to_client == "":
+            if limit_to_client == manual_client or limit_to_client == "":
                 while retry_count >= 0 and success == 0:
                     # Check cluster health - Expect Yellow to continue
                     if es.check_cluster_health_status(client_config, health_check_level):

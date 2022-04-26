@@ -59,12 +59,23 @@ def allocate_indices(client_config, index, index_allocation_policies):
                 allocation_type = key
         if allocation_type != '':
             # Change index allocation per policy
-            print("Changing allocation of index " + str(index) + \
-                " to " + str(allocation_type))
-            elastic_connection.indices.put_settings(
-                index=index,
-                body={"index.routing.allocation.require.box_type": allocation_type}
+            index_settings = elastic_connection.indices.get_settings(
+                index=index
             )
+            index_settings = index_settings[index]['settings']['index']
+            box_type = 'hot'
+            if 'routing' in index_settings:
+                if 'allocation' in index_settings['routing']:
+                    if 'require' in index_settings['routing']['allocation']:
+                        if 'box_type' in index_settings['routing']['allocation']['require']:
+                            box_type= index_settings['routing']['allocation']['require']['box_type']
+            if allocation_type != box_type:
+                print("Changing allocation of index " + str(index) + \
+                " to " + str(allocation_type))
+                elastic_connection.indices.put_settings(
+                    index=index,
+                    body={"index.routing.allocation.require.box_type": allocation_type}
+                )
     elastic_connection.close()
 
 def apply_allocation_to_indices(indices, index_allocation_policies, client_config):
