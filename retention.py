@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
+"""Applies retention policies"""
+import time
+from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
+import es
 from config import load_configs, load_settings
 from error import send_notification
-import es
-from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-import time
-notification = False
+NOTIFICATION = False
+
 def get_retention_policy(client_config):
+    """Get retention policy
+
+    Args:
+        client_config (dict): Client configuration
+
+    Returns:
+        dict: Client Configuration
+    """
     if "policy" in client_config:
         if "retention" in client_config['policy']:
             index_retention_policies = client_config['policy']['retention']
@@ -17,6 +27,13 @@ def get_retention_policy(client_config):
     return index_retention_policies
 
 def delete_old_indices(client_config, index, index_retention_policies):
+    """Deletes indices past retention policy
+
+    Args:
+        client_config (dict): Client configuration
+        index (str): Index name
+        index_retention_policies (dict): Retention policy
+    """
     elastic_connection = es.build_es_connection(client_config)
     newest_record = ""
     newest_record = es.get_newest_document_date_in_index(client_config, index, elastic_connection)
@@ -38,18 +55,31 @@ def delete_old_indices(client_config, index, index_retention_policies):
     elastic_connection.close()
 
 def apply_retention_to_old_indices(indices, index_retention_policies, client_config):
-    old_indices = []
+    """Apply retention to indices older than policy
+
+    Args:
+        indices (array): List of indices
+        index_retention_policies (dict): Retention policy
+        client_config (dict): Client configuration
+    """
     elastic_connection = es.build_es_connection(client_config)
-    with ThreadPoolExecutor(max_workers=es.get_lowest_data_node_thread_count(client_config)) as executor:
+    with ThreadPoolExecutor(
+            max_workers=es.get_lowest_data_node_thread_count(client_config)
+        ) as executor:
         for index in indices:
             index = str(index['index'])
             # Only proceed if index is not a special index
             if not es.check_special_index(index):
-                future = executor.submit(delete_old_indices, client_config, index, index_retention_policies)
+                executor.submit(delete_old_indices, client_config, index, index_retention_policies)
     elastic_connection.close()
-    return old_indices
 
 def apply_retention_policies(health_check_level, manual_client=""):
+    """Apply retention policies
+
+    Args:
+        health_check_level (str): Health check level required
+        manual_client (str, optional): Name of client. Defaults to "".
+    """
     settings = load_settings()
     retry_count = 60
     sleep_time = 60
@@ -57,16 +87,16 @@ def apply_retention_policies(health_check_level, manual_client=""):
     if settings['retention']['enabled']:
         # Load all client configurations from /opt/maintenance/*.json
         clients = load_configs()
-        # Loop through each client to perform accounting per client
-        for client in clients:
+        # Loop through each client to perform accounting per client\
+        for key, client_config in clients.items():
             # Set nice variable names
-            client_name = clients[client]['client_name']
+            client_name = key
+            limit_to_client = settings['settings']['limit_to_client']
             print("Processing retention for " + client_name)
-            client_config = clients[client]
             # If client set at command line only run it otherwise
             # execute for all clients
             if manual_client == "" or client_name == manual_client:
-                if settings['settings']['limit_to_client'] == client or settings['settings']['limit_to_client'] == "":
+                if limit_to_client == client_name or limit_to_client == "":
                     while retry_count >= 0 and success == 0:
                         # Check cluster health - Expect Yellow to continue
                         if es.check_cluster_health_status(client_config, health_check_level):
@@ -75,31 +105,73 @@ def apply_retention_policies(health_check_level, manual_client=""):
                             # Next, get information on all current indices in cluster
                             indices = es.es_get_indices(client_config)
                             # Get the list of indices that are older than the retention policy
-                            apply_retention_to_old_indices(indices, index_retention_policies, client_config)
+                            apply_retention_to_old_indices(
+                                indices,
+                                index_retention_policies,
+                                client_config
+                            )
                             success = 1
                         else:
                             if retry_count > 0:
-                                print("Retention operation failed for " + client_config['client_name'] + ". Cluster health does not meet level:  " + settings['retention']['health_check_level'])
+                                print("Retention operation failed for " + client_name + \
+                                    ". Cluster health does not meet level:  " + \
+                                    settings['retention']['health_check_level'])
                             else:
-                                message = "Retention operation failed.\n\nIt is also possible that connections are unable to be made to the client/nginx node. Please fix.\n\nRemember that in order for client's to be properly build you will need to get their cluster status to **Green** or **Yellow** and then re-run the following command:\n\n**python3 /opt/elastic-ilm/retention.py --client " + client_name + "**"
-                                send_notification(client_config, "retention", "Failed", message, teams=settings['retention']['ms-teams'], jira=settings['retention']['jira'])
+                                message = "Retention operation failed.\n\n" + \
+                                    "It is also possible that connections are " + \
+                                    "unable to be made to the client/nginx node." + \
+                                    "Please fix.\n\nRemember that in order for " + \
+                                    "client's to be properly build you will need " + \
+                                    "to get their cluster status to **Green** " + \
+                                    "or **Yellow** and then re-run the following" + \
+                                    " command:\n\n**python3 " + \
+                                    "/opt/elastic-ilm/retention.py --client " + \
+                                    client_name + "**"
+                                send_notification(
+                                    client_config,
+                                    "retention",
+                                    "Failed",
+                                    message,
+                                    teams=settings['retention']['ms-teams'],
+                                    jira=settings['retention']['jira']
+                                )
                         if success == 0:
                             # Decrese retry count by one before trying while statement again
                             retry_count = retry_count - 1
-                            print("Retry attempts left for retention operation set to " + str(retry_count) + " sleeping for " + str(sleep_time) + " seconds")
+                            print("Retry attempts left for retention " + \
+                                "operation set to " + str(retry_count) + \
+                                " sleeping for " + str(sleep_time) + " seconds")
                             time.sleep(sleep_time)
-                    
+
 if __name__ == "__main__":
     import argparse
     from argparse import RawTextHelpFormatter
-    parser = argparse.ArgumentParser(description='Used to manually run accounting against a specific client (Example - retention.py --client ha)', formatter_class=RawTextHelpFormatter)
-    parser.add_argument("--client", default="", type=str, help="Set to a specific client name to limit the accounting script to one client")
-    parser.add_argument("--notification", default="True", type=str, help="Set to False to disable notifications")
+    parser = argparse.ArgumentParser(
+        description='Used to manually run accounting against a ' + \
+            'specific client (Example - retention.py --client ha)',
+        formatter_class=RawTextHelpFormatter
+    )
+    parser.add_argument(
+        "--client",
+        default="",
+        type=str,
+        help="Set to a specific client name to limit the accounting script to one client"
+    )
+    parser.add_argument(
+        "--notification",
+        default="True",
+        type=str,
+        help="Set to False to disable notifications"
+    )
+    client_settings = load_settings()
 
     args = parser.parse_args()
-    manual_client = args.client
+    named_client = args.client
     if args.notification == "True":
-        notification = True
+        NOTIFICATION = True
     else:
-        notification = False
-    apply_retention_policies(settings['retention']['health_check_level'], manual_client)
+        NOTIFICATION = False
+    apply_retention_policies(
+        client_settings['retention']['health_check_level'],
+        named_client
+    )

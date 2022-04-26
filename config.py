@@ -7,8 +7,12 @@ from functools import wraps
 import time
 
 base_dir = os.path.abspath(os.path.dirname(__file__))
+if "base_dir" not in locals():
+    base_dir = "/etc/elastic-ilm"
 if os.path.exists("/etc/elastic-ilm/settings.toml"):
     settings_file = "/etc/elastic-ilm/settings.toml"
+elif os.path.exists("/etc/maintenance/modules/settings.toml"):
+    settings_file = "/etc/maintenance/modules/settings.toml"
 else:
     settings_file = base_dir + "/settings.toml"
 if not os.path.exists(settings_file):
@@ -93,3 +97,12 @@ def load_configs(client_value=""):
                     sys.exit(1)
                 clients[client_name] = client
     return clients
+
+def load_config(client_value=""):
+    settings = load_settings()
+    for file in os.listdir(settings['settings']['client_json_folder']):
+        if client_value != "":
+            if file.endswith(".json") and file.startswith(str(client_value)):
+                with open(settings['settings']['client_json_folder'] + '/' + file) as f:
+                    client = json.load(f)
+                return client

@@ -44,6 +44,14 @@ health_check_level = 'yellow'
 ms-teams = true
 jira = false
 
+[allocation]
+enabled = true
+minutes_between_run = 60
+
+# Which notifications to use on failure
+ms-teams = true
+jira = false
+
 [rollover]
 enabled = false
 minutes_between_run = 10

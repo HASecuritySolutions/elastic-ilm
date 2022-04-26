@@ -126,6 +126,36 @@ def check_index_retention_policy(index, policies):
     if match_found == 0:
         return "global"
 
+def check_index_allocation_policy(index, policies):
+    match_found = 0
+    # This sorts the index allocation policies in descending order,
+    # by length of characters
+    policies = sorted(policies, key=lambda policy: len(policy), reverse=True)
+    for policy in policies:
+        # Ignore global as that's the fallback if no policy is found
+        if policy != "global":
+            if index.startswith(policy):
+                match_found = 1
+                return policy
+    # No policy match found, set fallback of global
+    if match_found == 0:
+        return "global"
+
+def check_index_forcemerge_policy(index, policies):
+    match_found = 0
+    # This sorts the index forcemerge policies in descending order,
+    # by length of characters
+    policies = sorted(policies, key=lambda policy: len(policy), reverse=True)
+    for policy in policies:
+        # Ignore global as that's the fallback if no policy is found
+        if policy != "global":
+            if index.startswith(policy):
+                match_found = 1
+                return policy
+    # No policy match found, set fallback of global
+    if match_found == 0:
+        return "global"
+
 def check_index_rollover_policy(index, policies):
     match_found = 0
     # This sorts the index rollover policies in descending order,
@@ -150,7 +180,6 @@ def get_index_alias_members(client, alias):
     es.close()
     return indices
 
-@retry(Exception, tries=6, delay=10)
 def get_all_index_aliases(client):
     try:
         es = build_es_connection(client)
@@ -251,7 +280,6 @@ def get_lowest_data_node_thread_count(client_config):
     es.close()
     return safe_thread_use
 
-@retry(Exception, tries=6, delay=10)
 def get_newest_document_date_in_index(client_config, index, elastic_connection):
     body = '{"sort" : [{ "@timestamp" : {"order" : "desc", "mode": "max"}}], "size": 1}'
     try:
@@ -299,6 +327,8 @@ def check_special_index(index):
         special = True
     if str(index).startswith("readonlyrest"):
         special = True
+    if str(index).startswith("reflex-"):
+        special = True
     if str(index).startswith(".readonlyrest"):
         special = True
     if str(index).startswith(".signal"):
@@ -315,6 +345,13 @@ def check_special_index(index):
         special = True
     return special
     
+def return_fields_from_query(response, fields={}):
+    output = {}
+    for record in response['hits']['hits']:
+        for field in record['_source']:
+            if field in fields:
+                output[field] = record['_source'][field]
+    return output
 
 # This function will return the value of a specific field in the first result
 # It assumes that you are passing the result from an ES search
@@ -532,7 +569,6 @@ def delete_index(client_config, index):
         send_notification(client_config, "retention", "Failed", "Deletion job failed for indices " + str(indices), teams=settings['retention']['ms-teams'], jira=settings['retention']['jira'])
         print(e)
 
-@retry(Exception, tries=6, delay=10)
 def forcemerge_index(client_config, index):
     try:
         es = build_es_connection(client_config)
@@ -581,7 +617,6 @@ def check_acknowledged_true(status):
 
 # Connection built similar to https://elasticsearch-py.readthedocs.io/en/7.10.0/api.html#elasticsearch
 # Had trouble with check_hostname set to True for some reason
-@retry(Exception, tries=6, delay=10)
 def build_es_connection(client_config):
     settings = load_settings()
     es_config = {}
