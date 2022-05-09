@@ -786,6 +786,9 @@ def check_cluster_health_status(client_config, color):
     if color == "yellow" and (health['status'] == 'green' or health['status'] == "yellow"):
         print("Client " + client_config['client_name'] + " has a healthy cluster (" + health['status'] + ")")
         check = True
+    if color == "red" and (health['status'] == 'green' or health['status'] == "yellow" or health['status'] == "red"):
+        print("Client " + client_config['client_name'] + " has a cluster status of " + health['status'])
+        check = True
     if not check:
         # If cluster health check fails or is red, log and do not process rollovers
         print("Client " + client_config['client_name'] + " has a unhealthy cluster (" + health['status'] + ")")
