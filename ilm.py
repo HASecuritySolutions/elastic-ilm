@@ -73,8 +73,9 @@ def start_jobs():
             sched.add_job(
                 apply_retention_policies,
                 'interval',
-                minutes=settings['retention']['minutes_between_run'],
-                args=[settings['retention']['health_check_level']]
+                minutes=settings['retention']['minutes_between_run']
+                #,
+                #args=[settings['retention']['health_check_level']]
             )
 
     if 'allocation' in settings:

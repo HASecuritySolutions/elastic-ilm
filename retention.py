@@ -73,11 +73,10 @@ def apply_retention_to_old_indices(indices, index_retention_policies, client_con
                 executor.submit(delete_old_indices, client_config, index, index_retention_policies)
     elastic_connection.close()
 
-def apply_retention_policies(health_check_level, manual_client=""):
+def apply_retention_policies(manual_client=""):
     """Apply retention policies
 
     Args:
-        health_check_level (str): Health check level required
         manual_client (str, optional): Name of client. Defaults to "".
     """
     settings = load_settings()
@@ -98,7 +97,7 @@ def apply_retention_policies(health_check_level, manual_client=""):
             if limit_to_client == manual_client or limit_to_client == "":
                 while retry_count >= 0 and success == 0:
                     # Check cluster health - Expect Yellow to continue
-                    if es.check_cluster_health_status(client_config, health_check_level):
+                    if es.check_cluster_health_status(client_config, settings['retention']['health_check_level']):
                         # Grab the client's retention policies
                         index_retention_policies = get_retention_policy(client_config)
                         # Next, get information on all current indices in cluster
@@ -171,6 +170,5 @@ if __name__ == "__main__":
     else:
         NOTIFICATION = False
     apply_retention_policies(
-        client_settings['retention']['health_check_level'],
         named_client
     )
