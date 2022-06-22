@@ -200,7 +200,7 @@ def calculate_accounting(client_config, client_name):
                 print(f"Total device tracking is {total_devices}")
 
             if cluster_size > 1:
-                if os.path.isdir(settings['accounting']['output_folder']) and len(accounting_records) != 0:
+                if os.path.isdir(settings['accounting']['output_folder']) and len(accounting_records) != 0 and not settings['settings']['debug']:
                     with open(settings['accounting']['output_folder'] + '/' + client_name + "_accounting-" + date_time + ".json") as f:
                         accounting_file = f.readlines()
                     total_accounting_size = 0

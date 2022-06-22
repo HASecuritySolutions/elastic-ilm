@@ -11,7 +11,7 @@ In addition, decoupling from Elastic's ILM and using this projects custom ILM al
 - [x] Purge indices based on index creation date
 - [x] Purge indices based on newest document within index
 - [x] Generate accounting/billing information for index consumption with hot/warm tier pricing models
-- [ ] Roadmap Item - Mark index allocation to move data from hot to warm
+- [x] Mark index allocation to move data from hot to warm
 - [ ] Considering - Identify indices not attached to a rollover
 - [ ] Considering - Support auto migration of non-rollover attached indices to rollovers
 - [ ] Considering - Support auto reindex of prior non-rollover data into rollover indices

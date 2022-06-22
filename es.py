@@ -66,18 +66,30 @@ def build_aggregation(search, name, aggregation_type, filter, metric_name,\
 	search.aggs.metric(metric_name, metric, field=metric_field)
 	return Search
 
-def aggregate_search(es_connection, index_pattern, search_query, aggregation_type, aggregation_field, sort='@timestamp', limit_to_fields=[], date_start='now-1d/d', date_end='now'):
+def aggregate_search(es_connection, index_pattern, search_query, aggregation_type, aggregation_field, sort='@timestamp', limit_to_fields=[], date_start='now-1d/d', date_end='now', result_size=100, interval='auto'):
     s = Search(using=es_connection, index=index_pattern, doc_type='_doc')
     s = s.query('query_string', query=search_query)
     if len(limit_to_fields) != 0:
-	    s = s.source(limit_to_fields)
+            s = s.source(limit_to_fields)
     s = s.sort(sort)
-    s = s.filter('range', **{'@timestamp': {'gte': date_start, 'lt': date_end}})
-    # The four lines above could be summarized into the line below based on your preference:
-    # s = Search(using=es_connection, index='lab4.1-complete', doc_type='_doc').query('query_string', query='tags:internal_source').source(['source_ip']).sort('source_ip')
-    s.aggs.bucket(aggregation_field, 'terms', field=aggregation_field, size=999999).metric('Count', aggregation_type, field=aggregation_field)
+    if date_start != 'ignore':
+        s = s.filter('range', **{sort: {'gte': date_start, 'lt': date_end}})
+    s.aggs.bucket(aggregation_field, 'terms', field=aggregation_field, size=result_size)
+    if aggregation_type == 'date_histogram':
+        s.aggs[aggregation_field].metric('Count', aggregation_type, field=aggregation_field, interval=interval)
+    else:
+        s.aggs[aggregation_field].metric('Count', aggregation_type, field=aggregation_field)
     response = s.execute()
-    return [ x['key'] for x in response.aggregations[aggregation_field].buckets ]
+    if aggregation_type in ["terms", "auto_date_histogram", "date_histogram"]:
+        data = [ x for x in response.aggregations[aggregation_field].buckets ]
+        return_dict = {}
+        for row in data:
+            field = row['key']
+            value = row['doc_count']
+            return_dict[field] = value
+        return return_dict
+    else:
+        return [ x for x in response.aggregations[aggregation_field].buckets ]
 
 def multiple_aggregate_search(es_connection, index_pattern, search_query, aggregation_type, aggregation_field_one, aggregation_field_two, sort='@timestamp', limit_to_fields=[], date_start='now-1d/d', date_end='now'):
     s = Search(using=es_connection, index=index_pattern, doc_type='_doc')
@@ -341,7 +353,7 @@ def check_special_index(index):
         special = True
     if str(index).startswith(".transform-internal"):
         special = True
-    if str(index).startswith(".") and not str(index).startswith(".monitoring"):
+    if str(index).startswith(".") and not str(index).startswith(".monitoring") and not str(index).startswith(".ds-"):
         special = True
     return special
     
@@ -776,6 +788,50 @@ def restore_index(client_config, backup_repository, snapshot_name, index_name):
         elastic_connection.close()
         print("Operation failed - Restore snapshot " + snapshot_name + " for repo " + backup_repository + " for index name of : " + index_name)
         raise Exception(e)
+
+def run_search(es_connection, index, query, sort='@timestamp', limit_to_fields=[], size=10):
+        """[summary]
+
+        Args:
+                index ([string]): [Index pattern to search against]
+                query ([string]): [Lucene query to limit results]
+                sort (str, optional): [Sort filter]. Defaults to '@timestamp'.
+                limit_to_fields (list, optional): [Limit which fields to return]. Defaults to [].
+
+        Returns:
+                [type]: [description]
+        """
+
+        search = es_connection.search(index=index, doc_type='_doc', q=query, _source_includes=limit_to_fields, sort=sort, size=size)
+        return search
+
+def return_fields_from_query(response, fields={}):
+    output = []
+    for record in response['hits']['hits']:
+        row = {}
+        for field in record['_source']:
+            if field in fields:
+                row[field] = record['_source'][field]
+        output.append(row)
+    return output
+
+def return_field_mapped_to_value_from_query(response, field_name, value_name):
+    output = {}
+    for record in response['hits']['hits']:
+        key = ''
+        value = ''
+        for field in record['_source']:
+            if field_name == field:
+                key = record['_source'][field]
+            if value_name == field:
+                value = record['_source'][field]
+            if key != '' and value != '':
+                output[key] = value
+                key = ''
+                value = ''
+    return output
+
+
 
 def check_cluster_health_status(client_config, color):
     health = check_cluster_health(client_config)
