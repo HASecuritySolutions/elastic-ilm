@@ -6,3 +6,4 @@ settings.toml.backup
 .vscode
 accounting
 *.json
+__pycache__
