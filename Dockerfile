@@ -3,8 +3,8 @@ FROM python:3.11.0a7-slim
 LABEL description="H & A Security Solutions Elastic ILM"
 LABEL maintainer="Justin Henderson -justin@hasecuritysolutions.com"
 
-RUN apt update&& \
-    apt install git pipenv -y && \
+RUN apt update && \
+    apt install git pipenv build-essential libssl-dev libffi-dev python3-dev -y && \
     apt clean && \
     cd /opt && \
     git clone https://github.com/HASecuritySolutions/elastic-ilm.git && \
