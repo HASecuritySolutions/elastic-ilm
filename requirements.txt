@@ -1,9 +1,6 @@
 apscheduler
 sd-notify
-numpy
 schedule
-pandas
-scipy
 pymsteams
 toml
 ipykernel

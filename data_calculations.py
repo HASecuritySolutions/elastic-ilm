@@ -4,7 +4,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from models import db, Accounting
 import pandas as pd
-from scipy import stats
 import numpy as np
 import es
 from config import load_configs
