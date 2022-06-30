@@ -271,6 +271,18 @@ def es_get_indices(client):
     es.close()
     return indices
 
+def es_get_data_stream_indices(client):
+    es = build_es_connection(client)
+    indices = []
+    # h is used to select fields to return (to see full list open Dev Tools and run the below command)
+    # GET /_cat/indices?help
+    # s is used to sort the resulting output
+    # bytes = b makes it return numeric bytes instead of human readable bytes
+    # More information at https://www.elastic.co/guide/en/elasticsearch/reference/current/cat.html
+    for index in es.cat.indices(".ds-*", format="json", h=("health","status","index","uuid","shardsPrimary","shardsReplica","docsCount","docsDeleted","storeSize","creation.date.string","creation.date","memory.total", "pri.store.size"), s="creation.date", bytes="b"):
+        indices.append(index)
+    es.close()
+    return indices
 
 def get_lowest_data_node_thread_count(client_config):
     es = build_es_connection(client_config)

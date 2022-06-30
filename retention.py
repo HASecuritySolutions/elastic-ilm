@@ -51,6 +51,7 @@ def delete_old_indices(client_config, index, index_retention_policies):
         # If greater than or equal to policy date, delete index
         if days_ago >= policy_days:
             # Delete old index
+            print(f"Deleting index {index} due to age of {days_ago} vs policy limit of {policy_days}")
             es.delete_index(client_config, index)
     elastic_connection.close()
 

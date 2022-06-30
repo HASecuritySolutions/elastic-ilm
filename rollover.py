@@ -2,9 +2,16 @@
 from config import load_configs, load_settings
 from error import send_notification
 import es
+import re
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 import time
+
+def get_values_from_dictionary_array(array, field):
+    values = set()
+    for item in array:
+        values.add(item[field])
+    return sorted(values)
 
 def get_rollover_policy(client_config):
     # Grab the client's rollover policies
@@ -52,9 +59,10 @@ def apply_rollover_policy_to_alias(client_config, alias, index_rollover_policies
             if days_ago >= index_rollover_policies[policy]["days"] and index_size_in_gb >= 1:
                 rollover_reason = 'Days Policy'
                 rollover = True
+            #print(f"Processing index {index['index']} with size of {index_size_in_gb} and age of {days_ago}")
             # If index is rollover ready, append to list
             if rollover:
-                print("Adding index " + str(index['index']) + " to rollover due to " + rollover_reason)
+                print(f"Adding index {index['index']} to rollover due to {rollover_reason}. Size={index_size_in_gb} Age={days_ago}")
                 # Rollover the index
                 if not settings['settings']['debug']:
                     # This triggers the actual rollover
@@ -81,6 +89,32 @@ def rollover_client_indicies(client_config):
                 for alias in aliases:
                     executor.submit(apply_rollover_policy_to_alias, client_config, alias, index_rollover_policies)
             success = 1
+            data_streams_indices = es.es_get_data_stream_indices(client_config)
+            aliases = []
+            for data_stream in data_streams_indices:
+                alias = {
+                    'alias': data_stream['index'][4:-7],
+                    'index': data_stream['index'],
+                    'filter': "-",
+                    'routing_search': "-",
+                    "is_write_index": 'false'
+                }
+                aliases.append(alias)
+            unique_indices = get_values_from_dictionary_array(aliases, 'index')
+            unique_alias_names = get_values_from_dictionary_array(aliases, 'alias')
+            for alias in unique_alias_names:
+                # print(f"Processing data stream mock alias of {alias}:")
+                regex = "^.ds-" + alias + '-[0-9]{6,}$'
+                *_, write_index = (index for index in unique_indices if re.match(regex, index))
+                count = 0
+                for data_stream_alias in aliases:
+                    if data_stream_alias['alias'] == alias and data_stream_alias['index'] == write_index:
+                        aliases[count]['is_write_index'] = 'true'
+                    count = count + 1
+            with ThreadPoolExecutor(max_workers=es.get_lowest_data_node_thread_count(client_config)) as executor:
+                # Apply rollover to aliases
+                for alias in aliases:
+                    executor.submit(apply_rollover_policy_to_alias, client_config, alias, index_rollover_policies)
         else:
             if retry_count > 0:
                 print("Rollover operation failed for " + client_config['client_name'] + ". Cluster health does not meet level:  " + settings['rollover']['health_check_level'])
