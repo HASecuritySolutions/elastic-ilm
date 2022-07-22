@@ -383,7 +383,7 @@ def take_snapshot_per_policies(client_config, job, backup_policy, repository, in
             "taken_because": "Scheduled backup per policy"
         }
     }
-    if backup_policy['retention'] != 0:
+    if backup_policy[job] != 0:
         backup_job = take_snapshot(client_config, repository, job, body)
         if backup_job:
             print(f"Backup for {job} completed successfully")
@@ -420,18 +420,17 @@ def run_backup(manual_client=""):
                             client_config, repository)
                         # Loop through each backup job found in policy
                         for job in backup_policy:
-                            if 'retention' in backup_policy[job]:
-                                if backup_policy[job]['retention'] != 0:
-                                    print(
-                                        f"Processing backups for repository {repository} with job of {job}")
-                                    apply_backup_retention_policies(
-                                        client_config, job, backup_policy[job]['retention'], repository)
-                                    if 'include_special' in backup_policy[job]:
-                                        take_snapshot_per_policies(
-                                            client_config, job, backup_policy[job], repository, include_special=backup_policy[job]['include_special'])
-                                    else:
-                                        take_snapshot_per_policies(
-                                            client_config, job, backup_policy[job], repository)
+                            if backup_policy[job] != 0:
+                                print(
+                                    f"Processing backups for repository {repository} with job of {job}")
+                                apply_backup_retention_policies(
+                                    client_config, job, backup_policy[job], repository)
+                                if 'include_special' in backup_policy:
+                                    take_snapshot_per_policies(
+                                        client_config, job, backup_policy[job], repository, include_special=backup_policy[job]['include_special'])
+                                else:
+                                    take_snapshot_per_policies(
+                                        client_config, job, backup_policy, repository)
                     else:
                         print(f"Backup repo not found - {repository}")
             else:

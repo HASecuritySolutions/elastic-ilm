@@ -51,8 +51,29 @@ def delete_old_indices(client_config, index, index_retention_policies):
         # If greater than or equal to policy date, delete index
         if days_ago >= policy_days:
             # Delete old index
-            print(f"Deleting index {index} due to age of {days_ago} vs policy limit of {policy_days}")
-            es.delete_index(client_config, index)
+            print(f"Deleting index {index} due to age of {days_ago}" \
+                f" vs policy limit of {policy_days}")
+            retries = 3
+            success = False
+            while retries != 0 or success:
+                if es.delete_index(client_config, index):
+                    success = 1
+                else:
+                    retries = retries - 1
+            if success is False:
+                settings = load_settings()
+                message = f"Retention operation failed for client {client_config['client_name']}."
+                message = message + f"\nTried deleting index {index} due to age of "
+                message = message + f"{days_ago} vs policy limit of {policy_days}"
+
+                send_notification(
+                    client_config,
+                    "retention",
+                    "Failed",
+                    message,
+                    teams=settings['retention']['ms-teams'],
+                    jira=settings['retention']['jira']
+                )
     elastic_connection.close()
 
 def apply_retention_to_old_indices(indices, index_retention_policies, client_config):
@@ -98,7 +119,9 @@ def apply_retention_policies(manual_client=""):
             if limit_to_client == manual_client or limit_to_client == "":
                 while retry_count >= 0 and success == 0:
                     # Check cluster health - Expect Yellow to continue
-                    if es.check_cluster_health_status(client_config, settings['retention']['health_check_level']):
+                    if es.check_cluster_health_status(
+                            client_config, settings['retention']['health_check_level']
+                        ):
                         # Grab the client's retention policies
                         index_retention_policies = get_retention_policy(client_config)
                         # Next, get information on all current indices in cluster

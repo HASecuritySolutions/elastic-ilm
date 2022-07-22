@@ -67,6 +67,7 @@ def start_jobs():
     if 'backup' in settings:
         if settings['backup']['enabled']:
             sched.add_job(run_backup, 'interval', minutes=settings['backup']['minutes_between_run'])
+            run_backup()
 
     if 'retention' in settings:
         if settings['retention']['enabled']:
