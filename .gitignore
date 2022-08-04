@@ -6,4 +6,5 @@ settings.toml.backup
 .vscode
 accounting
 *.json
-__pycache__
+__pycache_
+indices_needing_rollover.csv_
