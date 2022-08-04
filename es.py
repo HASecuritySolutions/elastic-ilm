@@ -235,28 +235,52 @@ def set_index_alias(client, alias, index, write_alias=False):
     es.close()
 
 def get_index_group(index):
-    m = re.search('^([a-zA-Z0-9-._]+)(-.*)?-20[0-9][0-9](\.|-)[0-9]{2}(\.|-)[0-9]{2}$', index)
+    if str(index).startswith('.ds-'):
+        index = index[4:]
+    # First, find and remove possible dates
+    m = re.search('-20[0-9][0-9](\.|-|_|:)[0-9]{2}(\.|-|_|:)[0-9]{2}$', index)
     if m:
-        index_group = m.group(1)
-    else:
-        m = re.search('^([a-zA-Z0-9-._]+)(-.*)?-20[0-9][0-9](\.|-)[0-9]{2}$', index)
-        if m:
-            index_group = m.group(1)
-        else:
-            m = re.search('^([a-zA-Z0-9-._]+)(-.*)?-20[0-9][0-9]$', index)
-            if m:
-                index_group = m.group(1)
-            else:
-                m = re.search('^([a-zA-Z0-9-._]+)(-.*)?-[0-9]{6,}$', index)
-                if m:
-                    index_group = m.group(1)
-                else:
-                    m = re.search('^([a-zA-Z0-9-._]+)(-.*)?-[a-zA-Z0-9-._]{3,}$', index)
-                    if m:
-                        index_group = m.group(1)
-                    else:
-                        index_group = index
-    return index_group
+        #print(f"Found date of {m.group(0)} in index {index}")
+        index = index.replace(str(m.group(0)), '')
+    m = re.search('20[0-9][0-9](\.|-|_|:)[0-9]{2}(\.|-|_|:)[0-9]{2}-', index)
+    if m:
+        #print(f"Found date of {m.group(0)} in index {index}")
+        index = index.replace(str(m.group(0)), '')
+
+    # Next, remove number sequence if found at end (ex: -000001)
+    m = re.search('-[0-9]{1,6}$', index)
+    if m:
+        #print(f"Found ending number sequence for index {index}")
+        index = index.replace(str(m.group(0)), '')
+
+    # m = re.search('^([a-zA-Z0-9-._]+)(-.*)?-20[0-9][0-9](\.|-)[0-9]{2}(\.|-)[0-9]{2}$', index)
+    # if m:
+    #     index_group = m.group(1)
+    # else:
+    #     m = re.search('^([a-zA-Z0-9-._]+)(-.*)?-20[0-9][0-9](\.|-)[0-9]{2}$', index)
+    #     if m:
+    #         index_group = m.group(1)
+    #     else:
+    #         m = re.search('^([a-zA-Z0-9-._]+)(-.*)?-20[0-9][0-9]$', index)
+    #         if m:
+    #             index_group = m.group(1)
+    #         else:
+    #             m = re.search('^([a-zA-Z0-9-._]+)(-.*)?-[0-9]{6,}$', index)
+    #             if m:
+    #                 index_group = m.group(1)
+    #             else:
+    #                 m = re.search('^([a-zA-Z0-9-._]+)(-.*)?-[a-zA-Z0-9-._]{3,}$', index)
+    #                 if m:
+    #                     index_group = m.group(1)
+    #                 else:
+    #                     index_group = index
+    return index
+
+# test = ['.ds-winlogbeat-ds-2022.08.04-000028', 'logstash-cisco', 'logstash-cisco-2022.08.04', 'logstash-cisco-2022.08.04-000001','.ds-winlogbeat-ds-2022-08-04-000028', 'logstash-cisco-2022-08-04', 'logstash-cisco-2022-08-04-000001','.ds-winlogbeat-ds-2022:08:04-000028', 'logstash-cisco-2022:08:04', 'logstash-cisco-2022:08:04-000001','.ds-winlogbeat-ds-2022_08_04-000028', 'logstash-cisco-2022_08_04', 'logstash-cisco-2022_08_04-000001']
+# for test_item in test:
+#     print(f"Initial index is {test_item}")
+#     group = get_index_group(test_item)
+#     print(f"Index group set to {group}")
 
 def es_get_indices(client):
     es = build_es_connection(client)
@@ -605,6 +629,7 @@ def delete_index(client_config, index):
         es.close()
     except:
         e = sys.exc_info()
+        print(e)
         print("Deletion job failed")
         settings = load_settings()
         send_notification(client_config, "retention", "Failed", "Deletion job failed for indices " + str(indices), teams=settings['retention']['ms-teams'], jira=settings['retention']['jira'])
@@ -617,6 +642,7 @@ def forcemerge_index(client_config, index):
         return es.get_index_operation_message(index, "forcemerge", status, client_config)
     except:
         e = sys.exc_info()[1]
+        print(e)
         if str(e).startswith("ConnectionTimeout caused by - ReadTimeoutError(HTTPSConnectionPool"):
             status = {}
             status['acknowledged'] = "true"
@@ -720,7 +746,7 @@ def build_es_connection(client_config):
             if client_config['password_authentication']:
                 password_authentication = True
         elif 'admin_password' in client_config['password']:
-                password_authentication = True
+            password_authentication = True
         if password_authentication:
             user = ''
             password = ''
@@ -754,6 +780,8 @@ def build_es_connection(client_config):
         es_config['retry_on_timeout'] = True
         if os.getenv('DEBUGON') == "1":
             print(es_config)
+            print(es_host)
+            print(es_port)
         return Elasticsearch(
             [{'host': es_host, 'port': es_port}], **es_config) 
     except:
@@ -770,6 +798,7 @@ def check_cluster_health(client_config):
         return health
     except:
         e = sys.exc_info()
+        print(e)
         es.close()
         raise Exception(e)
 
@@ -815,6 +844,7 @@ def restore_index(client_config, backup_repository, snapshot_name, index_name):
                 return False 
     except Exception as e:
         elastic_connection.close()
+        print(e)
         print("Operation failed - Restore snapshot " + snapshot_name + " for repo " + backup_repository + " for index name of : " + index_name)
         raise Exception(e)
 
