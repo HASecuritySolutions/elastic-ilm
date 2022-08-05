@@ -3,8 +3,40 @@ from encodings import utf_8
 import json
 import re
 
+# def get_index_group(index):
+#     """Returns index group for index
+
+#     Args:
+#         index (str): Full index name
+
+#     Returns:
+#         str: Index group name
+#     """
+#     match = re.search(r'^([a-zA-Z0-9-._]+)(-.*)?-20[0-9][0-9](\.|-)[0-9]{2}(\.|-)[0-9]{2}$', index)
+#     if match:
+#         index_group = match.group(1)
+#     else:
+#         match = re.search(r'^([a-zA-Z0-9-._]+)(-.*)?-20[0-9][0-9](\.|-)[0-9]{2}$', index)
+#         if match:
+#             index_group = match.group(1)
+#         else:
+#             match = re.search(r'^([a-zA-Z0-9-._]+)(-.*)?-20[0-9][0-9]$', index)
+#             if match:
+#                 index_group = match.group(1)
+#             else:
+#                 match = re.search(r'^([a-zA-Z0-9-._]+)(-.*)?-[0-9]{6,}$', index)
+#                 if match:
+#                     index_group = match.group(1)
+#                 else:
+#                     match = re.search(r'^([a-zA-Z0-9-._]+)(-.*)?-[a-zA-Z0-9-._]{3,}$', index)
+#                     if match:
+#                         index_group = match.group(1)
+#                     else:
+#                         index_group = index
+#     return index_group
+
 def get_index_group(index):
-    """Returns index group for index
+    """Gets the index group of a given index
 
     Args:
         index (str): Full index name
@@ -12,28 +44,24 @@ def get_index_group(index):
     Returns:
         str: Index group name
     """
-    match = re.search(r'^([a-zA-Z0-9-._]+)(-.*)?-20[0-9][0-9](\.|-)[0-9]{2}(\.|-)[0-9]{2}$', index)
-    if match:
-        index_group = match.group(1)
-    else:
-        match = re.search(r'^([a-zA-Z0-9-._]+)(-.*)?-20[0-9][0-9](\.|-)[0-9]{2}$', index)
-        if match:
-            index_group = match.group(1)
-        else:
-            match = re.search(r'^([a-zA-Z0-9-._]+)(-.*)?-20[0-9][0-9]$', index)
-            if match:
-                index_group = match.group(1)
-            else:
-                match = re.search(r'^([a-zA-Z0-9-._]+)(-.*)?-[0-9]{6,}$', index)
-                if match:
-                    index_group = match.group(1)
-                else:
-                    match = re.search(r'^([a-zA-Z0-9-._]+)(-.*)?-[a-zA-Z0-9-._]{3,}$', index)
-                    if match:
-                        index_group = match.group(1)
-                    else:
-                        index_group = index
-    return index_group
+    if str(index).startswith('.ds-'):
+        index = index[4:]
+    # First, find and remove possible dates
+    m = re.search('-20[0-9][0-9](\.|-|_|:)[0-9]{2}(\.|-|_|:)[0-9]{2}$', index)
+    if m:
+        #print(f"Found date of {m.group(0)} in index {index}")
+        index = index.replace(str(m.group(0)), '')
+    m = re.search('20[0-9][0-9](\.|-|_|:)[0-9]{2}(\.|-|_|:)[0-9]{2}-', index)
+    if m:
+        #print(f"Found date of {m.group(0)} in index {index}")
+        index = index.replace(str(m.group(0)), '')
+
+    # Next, remove number sequence if found at end (ex: -000001)
+    m = re.search('-[0-9]{1,6}$', index)
+    if m:
+        #print(f"Found ending number sequence for index {index}")
+        index = index.replace(str(m.group(0)), '')
+    return index
 
 # Opening JSON file
 FILE = open('/opt/elastic-ilm/small_indices.json', encoding='utf_8')
@@ -110,10 +138,11 @@ for group in queue.keys():
                 SIZE = SIZE + float(item['store.size'][0:len(item['store.size'])-1])
                 indices.append(item['index'])
     SIZE = SIZE / 1024 / 1024 / 1024
-    print(f"Group {group} has total GB size of {SIZE}")
-    print(f"POST _reindex?wait_for_completion=false")
-    csv_indices = ""
-    for index in indices:
-        csv_indices = csv_indices + index + ","
-    csv_indices = csv_indices[0:len(csv_indices) - 1]
-    print('{ "source": { "index": "' + str(csv_indices) + '"}, "dest": { "index": "' + group + '-reindex-000001"}}')
+    if 'winlogbeat' not in group and 'cumulus' not in group and 'fortinet' not in group and 'ubuntu' not in group and 'clavister' not in group and 'cisco-nx-os' not in group and 'trend-micro' not in group:
+        print(f"Group {group} has total GB size of {SIZE}")
+        print(f"POST _reindex?wait_for_completion=false")
+        csv_indices = ""
+        for index in indices:
+            csv_indices = csv_indices + index + ","
+        csv_indices = csv_indices[0:len(csv_indices) - 1]
+        print('{ "source": { "index": "' + str(csv_indices) + '"}, "dest": { "index": "' + group + '-reindex-000001"}}')

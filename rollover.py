@@ -93,6 +93,8 @@ def apply_rollover_policy_to_alias(client_config, alias, index_rollover_policies
             if days_ago >= index_rollover_policies[policy]["days"] and index_size_in_gb >= 1:
                 rollover_reason = 'Days Policy'
                 rollover = True
+            # if alias['index'] == 'logstash-justin-test-000003':
+            #     rollover = True
             # print(f"Processing index {index['index']} with size of {index_size_in_gb} and
             # age of {days_ago}")
             # If index is rollover ready, append to list
@@ -104,7 +106,7 @@ def apply_rollover_policy_to_alias(client_config, alias, index_rollover_policies
                 if not settings['settings']['debug']:
                     retries = 3
                     success = False
-                    while retries != 0 or success:
+                    while retries != 0 and success is False:
                         # This triggers the actual rollover
                         if es.rollover_index(
                                 client_config,
@@ -112,8 +114,6 @@ def apply_rollover_policy_to_alias(client_config, alias, index_rollover_policies
                                 str(alias['alias'])
                             ):
                             success = True
-                            # Forcemerge index on rollover
-                            es.forcemerge_index(client_config, str(index['index']))
                         else:
                             retries = retries - 1
                     if success is False:
