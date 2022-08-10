@@ -169,7 +169,7 @@ def rollover_client_indicies(client_config):
             for data_stream in data_streams_indices:
                 alias = {
                     'alias': data_stream['index'][4:-7],
-                    'index': data_stream['index'],
+                    'index': es.get_index_group(data_stream['index']),
                     'filter': "-",
                     'routing_search': "-",
                     "is_write_index": 'false'

@@ -63,6 +63,7 @@ def start_jobs():
                 minutes=settings['accounting']['minutes_between_run'],
                 args=[manual_client]
             )
+            run_accounting(manual_client)
 
     if 'backup' in settings:
         if settings['backup']['enabled']:
@@ -78,6 +79,7 @@ def start_jobs():
                 #,
                 #args=[settings['retention']['health_check_level']]
             )
+            apply_retention_policies()
 
     if 'allocation' in settings:
         if settings['allocation']['enabled']:
@@ -86,6 +88,7 @@ def start_jobs():
                 'interval',
                 minutes=settings['allocation']['minutes_between_run']
             )
+            apply_allocation_policies()
 
     if 'rollover' in settings:
         if settings['rollover']['enabled']:
@@ -94,6 +97,7 @@ def start_jobs():
                 'interval',
                 minutes=settings['rollover']['minutes_between_run']
             )
+            apply_rollover_policies()
 
     if 'forcemerge' in settings:
         if settings['forcemerge']['enabled']:
@@ -108,12 +112,14 @@ def start_jobs():
                 'interval',
                 minutes=60
             )
+        apply_forcemerge_policies()
     else:
         sched.add_job(
             apply_forcemerge_policies,
             'interval',
             minutes=60
         )
+        apply_forcemerge_policies()
 
     sched.start()
 
