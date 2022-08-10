@@ -55,6 +55,15 @@ def start_jobs():
     """
     settings = load_settings()
 
+    if 'rollover' in settings:
+        if settings['rollover']['enabled']:
+            sched.add_job(
+                apply_rollover_policies,
+                'interval',
+                minutes=settings['rollover']['minutes_between_run']
+            )
+            apply_rollover_policies()
+
     if "accounting" in settings:
         if settings['accounting']['enabled']:
             sched.add_job(
@@ -89,15 +98,6 @@ def start_jobs():
                 minutes=settings['allocation']['minutes_between_run']
             )
             apply_allocation_policies()
-
-    if 'rollover' in settings:
-        if settings['rollover']['enabled']:
-            sched.add_job(
-                apply_rollover_policies,
-                'interval',
-                minutes=settings['rollover']['minutes_between_run']
-            )
-            apply_rollover_policies()
 
     if 'forcemerge' in settings:
         if settings['forcemerge']['enabled']:

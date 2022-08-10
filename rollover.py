@@ -156,6 +156,8 @@ def rollover_client_indicies(client_config):
         ):
             # Get current aliases members
             aliases = es.get_all_index_aliases(client_config)
+            print("Normal aliases are:")
+            print(aliases)
             with ThreadPoolExecutor(
                 max_workers=es.get_lowest_data_node_thread_count(client_config)
             ) as executor:
@@ -175,6 +177,8 @@ def rollover_client_indicies(client_config):
                     "is_write_index": 'false'
                 }
                 aliases.append(alias)
+            print("Data stream aliases are:")
+            print(data_streams_indices)
             unique_indices = get_values_from_dictionary_array(aliases, 'index')
             unique_alias_names = get_values_from_dictionary_array(
                 aliases, 'alias')
