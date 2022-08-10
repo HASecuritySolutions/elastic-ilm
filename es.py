@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import os
+import requests
+from requests.auth import HTTPBasicAuth 
 from config import load_settings, retry
 settings = load_settings()
 if os.getenv('ILM_PLATFORM') == 'opensearch':
@@ -473,13 +475,17 @@ def get_rollover_index_name(current_index):
     current_index_number = int(re.findall(r'\d+', current_index_number_portion)[-1])
     next_index_number = str(current_index_number + 1)
     new_index = index_prefix + next_index_number.zfill(current_index_number_portion_length)
+    if new_index[0:4] == '.ds-':
+        new_index = new_index[4:]
     return new_index
 
 def rollover_index(client_config, index, alias):
     try:
-        es = build_es_connection(client_config)
+        
         if client_config['platform'] == "opensearch":
+            es = build_es_connection(client_config)
             status = es.indices.rollover(alias, timeout="60s", master_timeout="120s")
+            es.close()
             return get_index_operation_message(index, "rollover", status, client_config)
         else:
             indices = []
@@ -489,23 +495,14 @@ def rollover_index(client_config, index, alias):
             if isinstance(index, list):
                 indices = index
             for index in indices:
-                new_index = get_rollover_index_name(index)
-                status = es.indices.create(index=new_index, ignore=400)
-                if 'acknowledged' in status:
-                    if status['acknowledged']:
-                        # Update writeable index
-                        status = es.indices.update_aliases({
-                        "actions": [
-                            { "remove":    { "index": index, "alias": alias }}, 
-                            { "add": { "index": index, "alias": alias, "is_write_index": "false"  }}, 
-                            { "add":    { "index": new_index, "alias": alias, "is_write_index": "true"  }}  
-                        ]
-                        })
-                        return get_index_operation_message(index, "rollover", status, client_config)
+                url = f"https://client:9200/{alias}/_rollover"
+                response = requests.post(url, auth=HTTPBasicAuth('elastic', client_config['password']['admin_password']), json={})
+                print(response)
+                if response.status_code == 200:
+                    get_index_operation_message_http_request(index, "rollover", status, client_config)
                 else:
-                    print("Failed to create new index " + str(new_index) + " for rollover index")
+                    print("Failed to rollover index " + str(index) + " for rollover index")
                     return False
-        es.close()
     except:
         e = sys.exc_info()
         print("Rollover job failed")
@@ -582,6 +579,26 @@ def get_index_operation_message(index, operation, status, client_config):
             policy = 'retention'
         
         send_notification(client_config, operation.capitalize(), operation.capitalize() + " Failure", operation.capitalize() + " failed for " + index + " with a status of\n\n:" + str(status), teams=settings[policy]['ms-teams'], jira=settings[policy]['jira'])
+        return False
+
+def get_index_operation_message_http_request(index, operation, status_code, client_config):
+    if status_code == 200:
+        print(operation.capitalize() + " successful for " + index)
+        return True
+    else:
+        print(operation.capitalize() + " failed for " + index + " with a status of\n\n:" + str(status_code))
+        settings = load_settings()
+        if operation == "delete":
+            policy = 'retention'
+        if operation == "rollover":
+            policy = 'rollover'
+        if operation == 'forcemerge':
+            policy = 'rollover'
+        # Set fallback policy for notification settings
+        if operation != 'delete' and operation != 'rollover' and operation != 'forcemerge':
+            policy = 'retention'
+        
+        send_notification(client_config, operation.capitalize(), operation.capitalize() + " Failure", operation.capitalize() + " failed for " + index + " with a status of\n\n:" + str(status_code), teams=settings[policy]['ms-teams'], jira=settings[policy]['jira'])
         return False
 
 def bulk_insert_data_to_es(elasticsearch_connection, data, index, bulk_size=100):
