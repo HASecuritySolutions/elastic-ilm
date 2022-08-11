@@ -499,7 +499,6 @@ def rollover_index(client_config, index, alias):
                 indices.append(index)
             if isinstance(index, list):
                 indices = index
-            print(indices)
             for index in indices:
                 if 'ca_file' in client_config:
                     if client_config['ca_file'] != "":
