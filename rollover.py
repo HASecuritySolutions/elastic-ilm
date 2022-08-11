@@ -173,8 +173,8 @@ def rollover_client_indicies(client_config):
                 # the most recent index
                 write_index = ""
                 for ds_index in reversed(data_stream['indices']):
-                    if ds_index.endswith(str(index_number)):
-                        write_index = ds_index
+                    if ds_index['index_name'].endswith(str(index_number)):
+                        write_index = ds_index['index_name']
                         break
                 if write_index != "":
                     alias = {
