@@ -314,6 +314,12 @@ def es_get_highest_index_from_indices(client, indices):
     max_index = ''
     return max_index
 
+def get_data_streams(client):
+    es = build_es_connection(client)
+    response = es.indices.get_data_stream(name="*")
+    es.close()
+    return response
+
 def es_get_data_stream_indices(client):
     es = build_es_connection(client)
     indices = []

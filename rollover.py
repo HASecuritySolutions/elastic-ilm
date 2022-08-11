@@ -165,7 +165,7 @@ def rollover_client_indicies(client_config):
                                     client_config, alias, index_rollover_policies)
             success = 1
             data_streams_indices = es.es_get_data_stream_indices(client_config)
-            data_stream_response = es.indices.get_data_stream(name="*")
+            data_stream_response = es.get_data_streams(client_config)
             print(data_stream_response)
             aliases = []
             for data_stream in data_streams_indices:
