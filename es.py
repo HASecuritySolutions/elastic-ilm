@@ -486,20 +486,21 @@ def get_rollover_index_name(current_index):
     return new_index
 
 def rollover_index(client_config, index, alias):
-    try:
-        
+    try: 
         if client_config['platform'] == "opensearch":
             es = build_es_connection(client_config)
             status = es.indices.rollover(alias, timeout="60s", master_timeout="120s")
             es.close()
             return get_index_operation_message(index, "rollover", status, client_config)
         else:
+            print("hi")
             indices = []
             # Check if index is a single string or a list of indices
             if isinstance(index, str):
                 indices.append(index)
             if isinstance(index, list):
                 indices = index
+            print(indices)
             for index in indices:
                 if 'ca_file' in client_config:
                     if client_config['ca_file'] != "":
