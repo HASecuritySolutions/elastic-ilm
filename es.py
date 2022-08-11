@@ -508,6 +508,7 @@ def rollover_index(client_config, index, alias):
                         verify_check = False
                 else:
                     verify_check = False
+                print(verify_check)
                 url = f"https://client:9200/{alias}/_rollover"
                 response = requests.post(
                     url,
