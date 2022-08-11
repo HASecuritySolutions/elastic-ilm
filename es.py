@@ -486,7 +486,6 @@ def get_rollover_index_name(current_index):
     return new_index
 
 def rollover_index(client_config, index, alias):
-    print("abc")
     try:
         if client_config['platform'] == "opensearch":
             es = build_es_connection(client_config)
@@ -494,7 +493,6 @@ def rollover_index(client_config, index, alias):
             es.close()
             return get_index_operation_message(index, "rollover", status, client_config)
         else:
-            print("hi")
             indices = []
             # Check if index is a single string or a list of indices
             if isinstance(index, str):
@@ -510,7 +508,6 @@ def rollover_index(client_config, index, alias):
                         verify_check = False
                 else:
                     verify_check = False
-                print(verify_check)
                 url = f"https://client:9200/{alias}/_rollover"
                 response = requests.post(
                     url,
@@ -520,7 +517,7 @@ def rollover_index(client_config, index, alias):
                 )
                 print(response)
                 if response.status_code == 200:
-                    get_index_operation_message_http_request(index, "rollover", status, client_config)
+                    get_index_operation_message_http_request(index, "rollover", response.status_code, client_config)
                 else:
                     print("Failed to rollover index " + str(index) + " for rollover index")
                     return False
