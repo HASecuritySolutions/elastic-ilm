@@ -487,39 +487,32 @@ def get_rollover_index_name(current_index):
 
 def rollover_index(client_config, index, alias):
     try:
-        if client_config['platform'] == "opensearch":
-            es = build_es_connection(client_config)
-            status = es.indices.rollover(alias, timeout="60s", master_timeout="120s")
-            es.close()
-            return get_index_operation_message(index, "rollover", status, client_config)
-        else:
-            indices = []
-            # Check if index is a single string or a list of indices
-            if isinstance(index, str):
-                indices.append(index)
-            if isinstance(index, list):
-                indices = index
-            for index in indices:
-                if 'ca_file' in client_config:
-                    if client_config['ca_file'] != "":
-                        verify_check = client_config['ca_file']
-                    else:
-                        verify_check = False
+        indices = []
+        # Check if index is a single string or a list of indices
+        if isinstance(index, str):
+            indices.append(index)
+        if isinstance(index, list):
+            indices = index
+        for index in indices:
+            if 'ca_file' in client_config:
+                if client_config['ca_file'] != "":
+                    verify_check = client_config['ca_file']
                 else:
                     verify_check = False
-                url = f"https://client:9200/{alias}/_rollover"
-                response = requests.post(
-                    url,
-                    verify=verify_check,
-                    auth=HTTPBasicAuth('elastic', client_config['password']['admin_password']),
-                    json={}
-                )
-                print(response)
-                if response.status_code == 200:
-                    get_index_operation_message_http_request(index, "rollover", response.status_code, client_config)
-                else:
-                    print("Failed to rollover index " + str(index) + " for rollover index")
-                    return False
+            else:
+                verify_check = False
+            url = f"https://client:9200/{alias}/_rollover"
+            response = requests.post(
+                url,
+                verify=verify_check,
+                auth=HTTPBasicAuth('elastic', client_config['password']['admin_password']),
+                json={}
+            )
+            if response.status_code == 200:
+                get_index_operation_message_http_request(index, "rollover", response.status_code, client_config)
+            else:
+                print("Failed to rollover index " + str(index) + " for rollover index")
+                return False
     except:
         e = sys.exc_info()
         print("Rollover job failed")
