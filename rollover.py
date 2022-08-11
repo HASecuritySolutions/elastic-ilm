@@ -186,15 +186,15 @@ def rollover_client_indicies(client_config):
                     }
                     aliases.append(alias)
             
-            for data_stream in data_streams_indices:
-                alias = {
-                    'alias': data_stream['index'][4:-7],
-                    'index': es.get_index_group(data_stream['index']),
-                    'filter': "-",
-                    'routing_search': "-",
-                    "is_write_index": 'false'
-                }
-                aliases.append(alias)
+            # for data_stream in data_streams_indices:
+            #     alias = {
+            #         'alias': data_stream['index'][4:-7],
+            #         'index': es.get_index_group(data_stream['index']),
+            #         'filter': "-",
+            #         'routing_search': "-",
+            #         "is_write_index": 'false'
+            #     }
+            #     aliases.append(alias)
             with ThreadPoolExecutor(
                 max_workers=es.get_lowest_data_node_thread_count(client_config)
             ) as executor:
