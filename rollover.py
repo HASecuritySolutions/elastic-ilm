@@ -164,10 +164,28 @@ def rollover_client_indicies(client_config):
                     executor.submit(apply_rollover_policy_to_alias,
                                     client_config, alias, index_rollover_policies)
             success = 1
-            data_streams_indices = es.es_get_data_stream_indices(client_config)
-            data_stream_response = es.get_data_streams(client_config)
-            print(data_stream_response)
             aliases = []
+            #data_streams_indices = es.es_get_data_stream_indices(client_config)
+            data_stream_response = es.get_data_streams(client_config)
+            for data_stream in data_stream_response['data_streams']:
+                index_number = f"{data_stream['generation']:06}"
+                # Look through indices in reverse as the last entry is likely
+                # the most recent index
+                write_index = ""
+                for ds_index in reversed(data_stream['indices']):
+                    if ds_index.endswith(str(index_number)):
+                        write_index = ds_index
+                        break
+                if write_index != "":
+                    alias = {
+                        'alias': data_stream['name'],
+                        'index': write_index,
+                        'filter': "-",
+                        'routing_search': "-",
+                        "is_write_index": 'true'
+                    }
+                    aliases.append(alias)
+            
             for data_stream in data_streams_indices:
                 alias = {
                     'alias': data_stream['index'][4:-7],
@@ -177,19 +195,6 @@ def rollover_client_indicies(client_config):
                     "is_write_index": 'false'
                 }
                 aliases.append(alias)
-            unique_indices = get_values_from_dictionary_array(aliases, 'index')
-            unique_alias_names = get_values_from_dictionary_array(
-                aliases, 'alias')
-            for alias in unique_alias_names:
-                # print(f"Processing data stream mock alias of {alias}:")
-                regex = "^.ds-" + alias + '-[0-9]{6,}$'
-                *_, write_index = (index for index in unique_indices if re.match(regex, index))
-                count = 0
-                for data_stream_alias in aliases:
-                    if data_stream_alias['alias'] == alias and \
-                            data_stream_alias['index'] == write_index:
-                        aliases[count]['is_write_index'] = 'true'
-                    count = count + 1
             with ThreadPoolExecutor(
                 max_workers=es.get_lowest_data_node_thread_count(client_config)
             ) as executor:
@@ -197,6 +202,26 @@ def rollover_client_indicies(client_config):
                 for alias in aliases:
                     executor.submit(apply_rollover_policy_to_alias,
                                     client_config, alias, index_rollover_policies)
+            # unique_indices = get_values_from_dictionary_array(aliases, 'index')
+            # unique_alias_names = get_values_from_dictionary_array(
+            #     aliases, 'alias')
+            # for alias in unique_alias_names:
+            #     # print(f"Processing data stream mock alias of {alias}:")
+            #     regex = "^.ds-" + alias + '-[0-9]{6,}$'
+            #     *_, write_index = (index for index in unique_indices if re.match(regex, index))
+            #     count = 0
+            #     for data_stream_alias in aliases:
+            #         if data_stream_alias['alias'] == alias and \
+            #                 data_stream_alias['index'] == write_index:
+            #             aliases[count]['is_write_index'] = 'true'
+            #         count = count + 1
+            # with ThreadPoolExecutor(
+            #     max_workers=es.get_lowest_data_node_thread_count(client_config)
+            # ) as executor:
+            #     # Apply rollover to aliases
+            #     for alias in aliases:
+            #         executor.submit(apply_rollover_policy_to_alias,
+            #                         client_config, alias, index_rollover_policies)
         else:
             if retry_count > 0:
                 print("Rollover operation failed for " +
