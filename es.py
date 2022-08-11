@@ -486,7 +486,8 @@ def get_rollover_index_name(current_index):
     return new_index
 
 def rollover_index(client_config, index, alias):
-    try: 
+    print("abc")
+    try:
         if client_config['platform'] == "opensearch":
             es = build_es_connection(client_config)
             status = es.indices.rollover(alias, timeout="60s", master_timeout="120s")
