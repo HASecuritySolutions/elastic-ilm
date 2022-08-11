@@ -639,19 +639,19 @@ def delete_index(client_config, index):
         es = build_es_connection(client_config)
         # Check if index is a single string or a list of indices
         if isinstance(index, str):
-            indices = index
             # Delete the index
             status = es.indices.delete(index=index)
-            get_index_operation_message(indices, "delete", status, client_config)
-        if isinstance(index, list):
-            # Convert list into chunks of 50
-            # This will create a list of lists up to 50 indices per list
-            chunks = get_list_by_chunk_size(index, 50)
-            for chunk in chunks:
-                indices = ",".join(chunk)
-                # Delete the group of indices
-                status = es.indices.delete(index=indices)
-                get_index_operation_message(indices, "delete", status, client_config)
+            return get_index_operation_message(index, "delete", status, client_config)
+        else:
+            if isinstance(index, list):
+                # Convert list into chunks of 50
+                # This will create a list of lists up to 50 indices per list
+                chunks = get_list_by_chunk_size(index, 50)
+                for chunk in chunks:
+                    indices = ",".join(chunk)
+                    # Delete the group of indices
+                    status = es.indices.delete(index=indices)
+                    return get_index_operation_message(indices, "delete", status, client_config)
         # Close Elasticsearch connection
         es.close()
     except:

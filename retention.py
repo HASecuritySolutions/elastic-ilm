@@ -53,13 +53,8 @@ def delete_old_indices(client_config, index, index_retention_policies):
             # Delete old index
             print(f"Deleting index {index} due to age of {days_ago}" \
                 f" vs policy limit of {policy_days}")
-            retries = 3
-            success = False
-            while retries != 0 or success:
-                if es.delete_index(client_config, index):
-                    success = 1
-                else:
-                    retries = retries - 1
+            if es.delete_index(client_config, index):
+                success = True
             if success is False:
                 settings = load_settings()
                 message = f"Retention operation failed for client {client_config['client_name']}."
