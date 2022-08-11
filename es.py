@@ -501,8 +501,20 @@ def rollover_index(client_config, index, alias):
             if isinstance(index, list):
                 indices = index
             for index in indices:
+                if 'ca_file' in client_config:
+                    if client_config['ca_file'] != "":
+                        verify_check = client_config['ca_file']
+                    else:
+                        verify_check = False
+                else:
+                    verify_check = False
                 url = f"https://client:9200/{alias}/_rollover"
-                response = requests.post(url, auth=HTTPBasicAuth('elastic', client_config['password']['admin_password']), json={})
+                response = requests.post(
+                    url,
+                    verify=verify_check,
+                    auth=HTTPBasicAuth('elastic', client_config['password']['admin_password']),
+                    json={}
+                )
                 print(response)
                 if response.status_code == 200:
                     get_index_operation_message_http_request(index, "rollover", status, client_config)
