@@ -120,7 +120,8 @@ def apply_rollover_policy_to_alias(client_config, alias, index_rollover_policies
                         settings = load_settings()
                         message = "Rollover operation failed for client " + \
                             f"{client_config['client_name']}." + \
-                            f"\nTried rolling over index {index} " + \
+                            f"\nTried rolling over index {index['index']} " + \
+                            f"\nAlias/ds of {alias['alias']} " + \
                             f"due to {rollover_reason}. " + \
                             f"Size={index_size_in_gb} Age={days_ago}"
 

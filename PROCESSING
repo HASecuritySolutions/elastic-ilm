@@ -1,0 +1,19 @@
+PROCESSING
+Need to reindex .ds-infrastructure-fortinet-firewall-fortigate-1.0-000002 with size of 2.5tb
+Need to reindex logstash-linux-vmware-002226 with size of 523.6gb (reindex into logstash-linux-vmware-reindex)
+Need to reindex logstash-linux-vmware-002083 with size of 678.1gb
+
+TODO
+
+Need to reindex logstash-linux-vmware-000533 with size of 1.6tb
+Need to reindex logstash-linux-vmware-000442 with size of 2.5tb
+
+Need to reindex .ds-infrastructure-qumulo-storage-qumulo-1.0-000001 with size of 592.9gb (reindex into infrastructure-qumulo-storage-qumulo-1.0-reindex)
+
+Need to reindex winlogbeat-000026 with size of 905.6gb (reindex to winlogbeat-reindex2)
+
+Need to reindex logstash-clavister-000033 with size of 1tb (reindex into logstash-clavister-reindex)
+
+Need to reindex logstash-fortigate-000030 with size of 1.4tb (reindex into logstash-fortigate-reindex)
+
+Need to reindex .ds-infrastructure-clavister-firewall-clavister-1.0-000001 with size of 2.1tb (reindex into infrastructure-clavister-firewall-clavister-1.0-reindex)
