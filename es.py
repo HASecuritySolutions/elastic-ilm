@@ -502,10 +502,14 @@ def rollover_index(client_config, index, alias):
             else:
                 verify_check = False
             url = f"https://client:9200/{alias}/_rollover"
+            if client_config['platform'] == 'opensearch':
+                auth_user = 'admin'
+            else:
+                auth_user = 'elastic'
             response = requests.post(
                 url,
                 verify=verify_check,
-                auth=HTTPBasicAuth('elastic', client_config['password']['admin_password']),
+                auth=HTTPBasicAuth(auth_user, client_config['password']['admin_password']),
                 json={}
             )
             if response.status_code == 200:
