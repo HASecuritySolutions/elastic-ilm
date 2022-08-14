@@ -514,6 +514,7 @@ def rollover_index(client_config, index, alias):
             )
             if response.status_code == 200:
                 get_index_operation_message_http_request(index, "rollover", response.status_code, client_config)
+                return True
             else:
                 print(f"Failed to rollover index {index} for rollover index with alias/ds of {alias} and url of {url}")
                 return False
