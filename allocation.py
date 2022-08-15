@@ -52,12 +52,11 @@ def allocate_indices(client_config, index, index_allocation_policies):
         days_ago = (current_date - newest_record).days
         # Check if days_ago is greater than or equal to policy date
         # If greater than or equal to policy date, delete index
-        policy_days = dict(sorted(policy_days.items(), key=lambda item: item[1]))
-        allocation_type = ''
-        for key, value in policy_days.items():
-            if value <= days_ago:
-                allocation_type = key
-        if allocation_type != '':
+        if days_ago >= policy_days:
+          allocation_type = 'warm'
+        else:
+          allocation_type = 'hot'
+        if allocation_type == 'warm':
             # Change index allocation per policy
             index_settings = elastic_connection.indices.get_settings(
                 index=index
@@ -66,16 +65,34 @@ def allocate_indices(client_config, index, index_allocation_policies):
             box_type = 'hot'
             if 'routing' in index_settings:
                 if 'allocation' in index_settings['routing']:
+                    if "include" in index_settings['routing']['allocation']:
+                        if "_tier_preference" in index_settings['routing']['allocation']['include']:
+                            if "data_hot" in index_settings['routing']['allocation']['include']['_tier_preference']:
+                                box_type = "hot"
                     if 'require' in index_settings['routing']['allocation']:
                         if 'box_type' in index_settings['routing']['allocation']['require']:
                             box_type= index_settings['routing']['allocation']['require']['box_type']
             if allocation_type != box_type:
-                print("Changing allocation of index " + str(index) + \
-                " to " + str(allocation_type))
-                elastic_connection.indices.put_settings(
+                tier_preference = False
+                if 'routing' in index_settings:
+                  if 'allocation' in index_settings['routing']:
+                    if "include" in index_settings['routing']['allocation']:
+                      if "_tier_preference" in index_settings['routing']['allocation']['include']:
+                        tier_preference = True
+
+                if tier_preference:
+                  print(f"Changing allocation of index {index} to tier preference of data_warm")
+                  elastic_connection.indices.put_settings(
+                    index=index,
+                    body={"index.routing.allocation.include._tier_preference": "data_warm"}
+                  )
+                else:
+                  print(f"Changing allocation of index {index} to box type warm")
+                  elastic_connection.indices.put_settings(
                     index=index,
                     body={"index.routing.allocation.require.box_type": allocation_type}
-                )
+                  )
+
     elastic_connection.close()
 
 def apply_allocation_to_indices(indices, index_allocation_policies, client_config):

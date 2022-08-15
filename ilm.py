@@ -111,15 +111,13 @@ def start_jobs():
                 apply_forcemerge_policies,
                 'interval',
                 minutes=1440
-            )
-        apply_forcemerge_policies()
+            ) 
     else:
         sched.add_job(
             apply_forcemerge_policies,
             'interval',
-            minutes=60
+            minutes=1440
         )
-        apply_forcemerge_policies()
 
     sched.start()
 
