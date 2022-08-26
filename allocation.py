@@ -69,6 +69,8 @@ def allocate_indices(client_config, index, index_allocation_policies):
                         if "_tier_preference" in index_settings['routing']['allocation']['include']:
                             if "data_hot" in index_settings['routing']['allocation']['include']['_tier_preference']:
                                 box_type = "hot"
+                            if "data_warm" in index_settings['routing']['allocation']['include']['_tier_preference']:
+                                box_type = "warm"
                     if 'require' in index_settings['routing']['allocation']:
                         if 'box_type' in index_settings['routing']['allocation']['require']:
                             box_type= index_settings['routing']['allocation']['require']['box_type']
