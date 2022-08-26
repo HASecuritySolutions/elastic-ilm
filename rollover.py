@@ -95,8 +95,8 @@ def apply_rollover_policy_to_alias(client_config, alias, index_rollover_policies
                 rollover = True
             else:
                 if days_ago >= index_rollover_policies[policy]["days"]:
-                    print("Index meets required days to rollover " + \
-                        f"but is not larger than {index_size_in_gb}. Skipping")
+                    print(f"Index {index['index']} meets required days to rollover " + \
+                        f"but is not larger than 1 gb. Skipping")
             # if alias['index'] == 'logstash-justin-test-000003':
             #     rollover = True
             # print(f"Processing index {index['index']} with size of {index_size_in_gb} and
