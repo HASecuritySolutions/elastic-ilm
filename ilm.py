@@ -60,9 +60,10 @@ def start_jobs():
             sched.add_job(
                 apply_rollover_policies,
                 'interval',
-                minutes=settings['rollover']['minutes_between_run']
+                minutes=settings['rollover']['minutes_between_run'],
+                args=[manual_client]
             )
-            apply_rollover_policies()
+            apply_rollover_policies(manual_client)
 
     if "accounting" in settings:
         if settings['accounting']['enabled']:
@@ -111,7 +112,7 @@ def start_jobs():
                 apply_forcemerge_policies,
                 'interval',
                 minutes=1440
-            ) 
+            )
     else:
         sched.add_job(
             apply_forcemerge_policies,
