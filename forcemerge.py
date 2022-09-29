@@ -12,9 +12,9 @@ def get_forcemerge_policy(client_config):
         if "forcemerge" in client_config['policy']:
             index_forcemerge_policies = client_config['policy']['forcemerge']
         else:
-            index_forcemerge_policies = { "global": 1 }
+            index_forcemerge_policies = { "global": 32 }
     else:
-        index_forcemerge_policies = { "global": 1 }
+        index_forcemerge_policies = { "global": 32 }
     return index_forcemerge_policies
 
 def forcemerge_indices(client_config, index, index_forcemerge_policies):
@@ -35,7 +35,7 @@ def forcemerge_indices(client_config, index, index_forcemerge_policies):
         # If greater than or equal to policy date, delete index
         if days_ago >= policy_days:
             # Delete old index
-            status = elastic_connection.indices.forcemerge(index)
+            status = elastic_connection.indices.forcemerge(index, max_num_segments=1, expand_wildcards="all")
             if '_shards' in status:
                 if 'total' in status['_shards'] and 'successful' in status['_shards']:
                     if status['_shards']['total'] == status['_shards']['successful']:

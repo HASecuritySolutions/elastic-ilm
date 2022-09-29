@@ -272,7 +272,6 @@ def set_index_alias(client, alias, index, write_alias=False):
     })
     es.close()
 
-
 def get_index_group(index):
     if str(index).startswith('.ds-'):
         index = index[4:]
@@ -432,7 +431,6 @@ def get_newest_document_date_in_index(client_config, index, elastic_connection):
             return index_date
         else:
             raise e
-
 
 def check_special_index(index):
     special = False

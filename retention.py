@@ -49,12 +49,22 @@ def delete_old_indices(client_config, index, index_retention_policies):
         days_ago = (current_date - newest_record).days
         # Check if days_ago is greater than or equal to policy date
         # If greater than or equal to policy date, delete index
+        index_group = es.get_index_group(index)
         if days_ago >= policy_days:
             # Delete old index
             print(f"Deleting index {index} due to age of {days_ago}" \
                 f" vs policy limit of {policy_days}")
-            if es.delete_index(client_config, index):
-                success = True
+
+            index_group = es.get_index_group(index)
+            data_stream_info = elastic_connection.indices.get_data_stream(name=index_group)
+            number_of_indices_in_ds =0
+            number_of_indices_in_ds = len(data_stream_info['data_streams'][0]['indices'])
+            #active_ds_index = data_stream_info['data_streams'][0]['generation']
+            if number_of_indices_in_ds == 1:
+                elastic_connection.indices.delete_data_stream(name=index_group)
+            else:
+                if es.delete_index(client_config, index):
+                    success = True
             if success is False:
                 settings = load_settings()
                 message = f"Retention operation failed for client {client_config['client_name']}."
