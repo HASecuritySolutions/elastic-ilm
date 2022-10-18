@@ -15,3 +15,4 @@ numpy
 pandas
 plotly
 fpdf
+jinja2
