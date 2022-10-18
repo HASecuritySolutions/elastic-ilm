@@ -16,3 +16,4 @@ pandas
 plotly
 fpdf
 jinja2
+markdown
