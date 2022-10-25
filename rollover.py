@@ -72,10 +72,14 @@ def apply_rollover_policy_to_alias(client_config, alias, index_rollover_policies
             # Grab the primary store size (bytes) and convert to GB
             index_size_in_gb = round(
                 int(index['pri.store.size']) / 1024 / 1024 / 1024, 0)
+            primary_shard_size = index_size_in_gb / int(index['shardsPrimary'])
             if settings['settings']['debug']:
                 print("Write index " + str(index['index']) + ' created ' + str(days_ago) +
                       " days ago for alias " + alias['alias'] + " at " + str(index_size_in_gb) +
-                      " GB")
+                      f" GB with shard size of {primary_shard_size}")
+            print("Write index " + str(index['index']) + ' created ' + str(days_ago) +
+                      " days ago for alias " + alias['alias'] + " at " + str(index_size_in_gb) +
+                      f" GB with shard size of {primary_shard_size}")
             # If policy is auto set size check to primary shard count times 50
             if index_rollover_policies[policy]["size"] == "auto":
                 size_check = int(index['shardsPrimary']) * 50
@@ -95,7 +99,7 @@ def apply_rollover_policy_to_alias(client_config, alias, index_rollover_policies
                 minimum_size = settings['rollover']['shard_minimum_size']
             else:
                 minimum_size = 10
-            if days_ago >= index_rollover_policies[policy]["days"] and index_size_in_gb >= minimum_size:
+            if days_ago >= index_rollover_policies[policy]["days"] and primary_shard_size >= minimum_size:
                 rollover_reason = 'Days Policy'
                 rollover = True
             else:
@@ -107,7 +111,7 @@ def apply_rollover_policy_to_alias(client_config, alias, index_rollover_policies
             if rollover:
                 print(
                     f"Adding index {index['index']} to rollover due to {rollover_reason}. " +
-                    f"Size={index_size_in_gb} Age={days_ago}")
+                    f"Size={index_size_in_gb} Shard Size={primary_shard_size} Age={days_ago}")
                 # Rollover the index
                 if not settings['settings']['debug']:
                     retries = 3
