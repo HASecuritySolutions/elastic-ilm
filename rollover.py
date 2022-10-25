@@ -88,19 +88,21 @@ def apply_rollover_policy_to_alias(client_config, alias, index_rollover_policies
             if index_size_in_gb >= size_check:
                 rollover_reason = 'Size Policy'
                 rollover = True
+            
             # If the # of days exceeds the policy's day check and the index size is at
-            # least 1 GB, set rollover
-            if days_ago >= index_rollover_policies[policy]["days"] and index_size_in_gb >= 1:
+            # least 10 GB or settings['rollover']['shard_minimum_size'], set rollover
+            if 'shard_minimum_size' in settings['rollover']:
+                minimum_size = settings['rollover']['shard_minimum_size']
+            else:
+                minimum_size = 10
+            if days_ago >= index_rollover_policies[policy]["days"] and index_size_in_gb >= minimum_size:
                 rollover_reason = 'Days Policy'
                 rollover = True
             else:
                 if days_ago >= index_rollover_policies[policy]["days"]:
                     print(f"Index {index['index']} meets required days to rollover " + \
-                        f"but is not larger than 1 gb. Skipping")
-            # if alias['index'] == 'logstash-justin-test-000003':
-            #     rollover = True
-            # print(f"Processing index {index['index']} with size of {index_size_in_gb} and
-            # age of {days_ago}")
+                        f"but is not larger than {minimum_size} gb. Skipping")
+            
             # If index is rollover ready, append to list
             if rollover:
                 print(
