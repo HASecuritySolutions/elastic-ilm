@@ -18,3 +18,4 @@ fpdf
 jinja2
 markdown
 pdfkit
+pyhtml2pdf
