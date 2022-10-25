@@ -17,3 +17,4 @@ plotly
 fpdf
 jinja2
 markdown
+pdfkit
