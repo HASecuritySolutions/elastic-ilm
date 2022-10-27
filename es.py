@@ -436,6 +436,8 @@ def check_special_index(index):
     special = False
     if str(index).startswith("accounting"):
         special = True
+    if str(index).startswith("elastic-ilm"):
+        special = True
     if str(index).startswith(".kibana"):
         special = True
     if str(index).startswith(".async"):

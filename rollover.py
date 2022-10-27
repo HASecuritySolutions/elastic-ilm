@@ -1,6 +1,5 @@
 """This script processes rollovers for clients"""
 #!/usr/bin/env python3
-import re
 import time
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
@@ -92,7 +91,7 @@ def apply_rollover_policy_to_alias(client_config, alias, index_rollover_policies
             if index_size_in_gb >= size_check:
                 rollover_reason = 'Size Policy'
                 rollover = True
-            
+
             # If the # of days exceeds the policy's day check and the index size is at
             # least 10 GB or settings['rollover']['shard_minimum_size'], set rollover
             if 'shard_minimum_size' in settings['rollover']:
