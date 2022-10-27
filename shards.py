@@ -204,6 +204,24 @@ def is_small_shard_index(index, shard_size_check):
     else:
         return False
 
+def is_large_shard_index(index, shard_size_check):
+    """Checks if index shards are large
+
+    Args:
+        index (str): Index name
+        shard_size_check (int): Maximum shard size expected
+
+    Returns:
+        bool: True or False
+    """
+    index_size_in_gb = round(
+        int(index['pri.store.size']) / 1024 / 1024 / 1024, 0)
+    primary_shard_size = index_size_in_gb / \
+        int(index['shardsPrimary'])
+    if primary_shard_size >= shard_size_check:
+        return True
+    else:
+        return False
 
 def get_index_information(index_request, connection):
     """Get index or indices information
@@ -260,6 +278,82 @@ def get_small_indices(indices_information, processable_indices, shard_size_check
                     small_indices[index_group].append(entry)
     return small_indices
 
+def get_large_indices(indices_information, processable_indices, shard_size_check):
+    """Returns all large indices
+
+    Args:
+        indices_information (dict): Dictionary of index information from OpenSearch
+        processable_indices (list): List of indices to process
+        shard_size_check (int): Maximum shard size expected
+
+    Returns:
+        dict: Dictionary of index groups and indices that are large
+    """
+    large_indices = {}
+    for entry in processable_indices:
+        for index_details in indices_information:
+            if entry == index_details['index']:
+                if is_large_shard_index(index_details, shard_size_check):
+                    index_group = get_index_group(entry)
+                    if index_group not in large_indices:
+                        large_indices[index_group] = []
+                    large_indices[index_group].append(entry)
+    return large_indices
+
+def create_reindex_job(connection, reindex_items, reason):
+    """Creeats job to reindex reindex_items
+
+    Args:
+        connection (object): OpenSearch connection
+        reindex_items (dict): Dictionary of index groups with lists of indices
+        reason (str): Reason for the reindex
+    """
+    for reindex_index_group, _ in reindex_items.items():
+        # Only reindex if there are more than 1 indices to reindex
+        # otherwise you will reindex back into the same situation
+        index_count = 0
+        total_size = 0
+        reindex_batch = []
+        if len(reindex_items[reindex_index_group]) > 1:
+            for reindex_index in reindex_items[reindex_index_group]:
+                for index_info in all_index_information:
+                    if index_info['index'] == reindex_index:
+                        index_size = round(
+                            int(index_info['pri.store.size']) / 1024 / 1024 / 1024, 0)
+                        break
+                index_count += 1
+                total_size += index_size
+                reindex_batch.append(reindex_index)
+                if total_size > MINIMUM_SIZE or index_count > 30:
+                    print(f"Creating reindex job for {reindex_batch} with reason: {reason}")
+                    document = {
+                        'indices': reindex_batch,
+                        "operation": "reindex",
+                        "reason": reason,
+                        '@timestamp': datetime.now()
+                    }
+                    connection.index(
+                        index="elastic-ilm-jobs",
+                        id=str(uuid.uuid4()),
+                        body=document,
+                        op_type="create"
+                    )
+                    total_size = 0
+                    index_count = 0
+                    reindex_batch = []
+            if index_count > 0:
+                document = {
+                    'indices': reindex_batch,
+                    "operation": "reindex",
+                    "reason": "small_indices",
+                    '@timestamp': datetime.now()
+                }
+                opensearch.index(
+                    index="elastic-ilm-jobs",
+                    id=str(uuid.uuid4()),
+                    body=document,
+                    op_type="create"
+                )
 
 clients = load_configs()
 # Loop through each client to perform accounting per client
@@ -300,56 +394,12 @@ for key, config in clients.items():
             indices_to_process,
             MINIMUM_SIZE
         )
+        reindex_large_indices = get_large_indices(
+            all_index_information,
+            indices_to_process,
+            100
+        )
 
-        # Process in batches. Example
-        for small_index_group, _ in reindex_small_indices.items():
-            # Only reindex if there are more than 1 indices to reindex
-            # otherwise you will reindex back into the same situation
-            INDEX_COUNT = 0
-            TOTAL_SIZE = 0
-            REINDEX_BATCH = []
-            if len(reindex_small_indices[small_index_group]) > 1:
-                # print(
-                #     f"{small_index_group} has {len(reindex_small_indices[small_index_group])}" +\
-                #         " indices to reindex")
-                for small_index in reindex_small_indices[small_index_group]:
-                    for index_info in all_index_information:
-                        if index_info['index'] == small_index:
-                            index_size = round(
-                                int(index_info['pri.store.size']) / 1024 / 1024 / 1024, 0)
-                            break
-                    # print(f"Need to reindex {small_index} with size of {index_size}")
-                    INDEX_COUNT += 1
-                    TOTAL_SIZE += index_size
-                    REINDEX_BATCH.append(small_index)
-                    if TOTAL_SIZE > MINIMUM_SIZE or INDEX_COUNT > 30:
-                        print(REINDEX_BATCH)
-                        document = {
-                            'indices': REINDEX_BATCH,
-                            "operation": "reindex",
-                            "reason": "small_indices",
-                            '@timestamp': datetime.now()
-                        }
-                        result = opensearch.index(
-                            index="elastic-ilm-jobs",
-                            id=str(uuid.uuid4()),
-                            body=document,
-                            op_type="create"
-                        )
-                        TOTAL_SIZE = 0
-                        INDEX_COUNT = 0
-                        REINDEX_BATCH = []
-                if INDEX_COUNT > 0:
-                    document = {
-                        'indices': REINDEX_BATCH,
-                        "operation": "reindex",
-                        "reason": "small_indices",
-                        '@timestamp': datetime.now()
-                    }
-                    result = opensearch.index(
-                        index="elastic-ilm-jobs",
-                        id=str(uuid.uuid4()),
-                        body=document,
-                        op_type="create"
-                    )
+        create_reindex_job(opensearch, reindex_small_indices, "small_indices")
+        create_reindex_job(opensearch, reindex_large_indices, "large_indices")
         opensearch.close()
