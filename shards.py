@@ -368,7 +368,7 @@ for key, config in clients.items():
             MINIMUM_SIZE = settings['rollover']['shard_minimum_size']
         else:
             MINIMUM_SIZE = 10
-        print("Processing small indices for " + client_name)
+        print("Analyzing shards to look for undersized/oversized shards for " + client_name)
         opensearch = build_os_connection(config)
 
         # Get indices that have jobs created within OpenSearch
