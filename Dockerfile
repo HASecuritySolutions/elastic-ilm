@@ -1,15 +1,11 @@
-FROM --platform=$BUILDPLATFORM python:3.11-rc-slim
-ARG TARGETPLATFORM
+FROM python:3.11-rc-slim
 
 LABEL description="H & A Security Solutions Elastic ILM"
 LABEL maintainer="Justin Henderson -justin@hasecuritysolutions.com"
 
 RUN apt update && \
     apt install wget gpg -y && \
-    wget -qO - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - && \
-    echo "deb [arch=$TARGETPLATFORM] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/chrome.list && \
-    apt update && \
-    apt install git pipenv build-essential libssl-dev libffi-dev python3-dev google-chrome-stable -y && \
+    apt install git pipenv build-essential libssl-dev libffi-dev python3-dev chromium -y && \
     apt clean && \
     cd /opt && \
     git clone https://github.com/HASecuritySolutions/elastic-ilm.git && \
