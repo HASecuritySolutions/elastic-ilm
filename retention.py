@@ -36,6 +36,7 @@ def delete_old_indices(client_config, index, index_retention_policies):
         index (str): Index name
         index_retention_policies (dict): Retention policy
     """
+    settings = load_settings()
     elastic_connection = es.build_es_connection(client_config)
     newest_record = ""
     newest_record = es.get_newest_document_date_in_index(
@@ -68,12 +69,25 @@ def delete_old_indices(client_config, index, index_retention_policies):
             except:
                 number_of_indices_in_ds = 0
             if number_of_indices_in_ds == 1:
-                elastic_connection.indices.delete_data_stream(name=index_group)
+                if 'debug' in settings['settings']:
+                    if settings['settings']['debug']:
+                        print(f"DEBUG - Would have deleted data stream {index_group}")
+                    else:
+                        elastic_connection.indices.delete_data_stream(name=index_group)
+                else:
+                    elastic_connection.indices.delete_data_stream(name=index_group)
+
             else:
-                if es.delete_index(client_config, index):
-                    success = True
+                if 'debug' in settings['settings']:
+                    if settings['settings']['debug']:
+                        print(f"DEBUG - Would have deleted data stream {index}")
+                    else:
+                        if es.delete_index(client_config, index):
+                            success = True
+                else:
+                    if es.delete_index(client_config, index):
+                        success = True
             if success is False:
-                settings = load_settings()
                 message = f"Retention operation failed for client {client_config['client_name']}."
                 message = message + \
                     f"\nTried deleting index {index} due to age of "
